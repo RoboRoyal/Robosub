@@ -8,20 +8,29 @@ import java.io.IOException;
 import com.pi4j.io.serial.SerialFactory;
 import com.pi4j.io.serial.SerialPortException;
 */
+
+/**
+ * Directly interfaces with Arduino
+ * Most of it is commented out since pi4j is only available on pi
+ * Be careful when changing anything in this class, espeshally setUp, parseIn, self_test and run
+ * @author Dakota
+ *
+ */
 @SuppressWarnings("unused")
 class update implements Runnable{//interface with sensors
     Thread t;
+    static int mod = 0;
     static int init = 0;
     static String ard;
     static String port;
     static int br;
     /*static Serial serial;*/
-    static String output;
+    static String output = "[v";
     static String input = "def";
     static boolean ready = false;
-    static int IMU_pitch = 0, IMU_roll = 0, depth = 0, waterLvl = 0;
+    static int IMU_pitch = 0, IMU_roll = 0, depth = 0, waterLvl = 0, direction = 0;
     static boolean run = false;
-    static double[] motor_stop = {0,0,0,0,0,0,};
+    static double[] motor_stop = {0,0,0,0,0,0};
     //private static Logger logger = Logger.getLogger(update.class.getCanonicalName());
     public static double get_depth(){
         return depth;
@@ -58,6 +67,16 @@ class update implements Runnable{//interface with sensors
     }
     @Override
     public void run(){//TODO
+    	while(run){
+    		mod++;
+    		if(mod%1==0 && basic.debug_lvl > 5) System.out.println("Sending packet: "+mod+" as: "+output);
+    		try{
+        		Thread.sleep(100);
+        	}catch(Exception e){
+                //debug.error(e.getMessage());
+                System.out.println(e);
+            }
+    	}
     	/*long start = System.currentTimeMillis();
         while(run){
             if(serial.isOpen()){
@@ -65,8 +84,10 @@ class update implements Runnable{//interface with sensors
                     if(ready && (System.currentTimeMillis() >= start+100)){
                     	start = System.currentTimeMillis();
                         //System.out.println("writing");
+                        mod++;
+    					if(mod%20==0 && basic.debug_lvl > 5) System.out.println("Sending packet: "+mod+" as: "+output);
                         serial.write(output);
-                        Thread.sleep(50);
+                        Thread.sleep(80);
                     }
                 }catch(Exception e){
                     //debug.error(e.getMessage());
@@ -122,6 +143,7 @@ class update implements Runnable{//interface with sensors
                    IMU_roll = Integer.parseInt(me.split(",")[1].trim());
                    depth = Integer.parseInt(me.split(",")[2].trim());
                    waterLvl = Integer.parseInt(me.split(",")[3].trim());
+                   direction = Integer.parseInt(me.split(",")[4].trim());
                }else{
                    System.out.println("Bad input from ard: "+me);
                }
@@ -134,7 +156,10 @@ class update implements Runnable{//interface with sensors
         for(int i = 0; i<6; i++){
             output += (int)(x[i]);
             output += ",";
-        }   
+        }
+        if(!core.RUN){//dont let motors turn on unless we are running
+        	output = "[v";
+        }
         ready = true;
     }
     public static boolean self_test(){
@@ -177,8 +202,12 @@ class update implements Runnable{//interface with sensors
     	return force_in();
     }
     public static void stop(){
-    	motorControle.set_motors(motor_stop);
+    	//motorControle.set_motors(motor_stop);
     	try{
+        	output = "[n0,0,0,0,0,0";
+    		Thread.sleep(120);
+    		output = "[s1,";
+    		//TODO send shut command
     		Thread.sleep(120);
     		//serial.close();//TODO
     	}catch(Exception e){
@@ -189,8 +218,14 @@ class update implements Runnable{//interface with sensors
         	System.out.println("Connection terminated");
     	}
     }
+    public static void force_roll_value(int x){
+    	IMU_roll = x;
+    }
+    public static void force_pitch_value(int x){
+    	IMU_pitch = x;
+    }
 }
 
-
+//set_debug_lvl 8 init 1 -t 1000 start
 //https://github.com/OlivierLD/raspberry-pi4j-samples/blob/master/Arduino.RaspberryPI/src/arduino/raspberrypi/SerialReaderWriter.java
 //http://www.lediouris.net/RaspberryPI/Arduino/RPi.read.Arduino/readme.html
