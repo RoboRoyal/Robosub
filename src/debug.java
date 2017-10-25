@@ -17,6 +17,11 @@ import com.pi4j.io.gpio.event.GpioPinListenerDigital;
  */
 
 //@SuppressWarnings("unused")
+/**
+ * Helper class for extra debugging 
+ * @author Dakota
+ *
+ */
 class debug{//blinks LED and logs errors
 	private static Logger logger = Logger.getLogger(debug.class.getCanonicalName());
 	public static void blink(){
@@ -31,11 +36,11 @@ class debug{//blinks LED and logs errors
 		System.out.println("Error: "+str);
 		logger.error("me");
 		try {
-	        throw new IOException();
+	        throw new IOException("Thrown by debug manager");
 	    }
 	    catch (IOException e) {
 	        e.printStackTrace();
 	    }
-		movable.abort();
+		core.abort();
 	}
 }
