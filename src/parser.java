@@ -8,7 +8,11 @@ import java.io.Writer;
 import java.util.Scanner;
 
 import org.apache.log4j.Logger;
-
+/**
+ * Provides shell for user and parses config file and passed in arguments
+ * @author Dakota
+ *
+ */
 public class parser implements Runnable {
 	Thread t;
 	private static Logger logger = Logger.getLogger(basic.class.getCanonicalName());
@@ -16,6 +20,7 @@ public class parser implements Runnable {
 
 	private void star() {
 		Scanner in = new Scanner(System.in);
+		displayWelcome();
 		while (RUN) {
 			try{
 				System.out.print("> ");
@@ -23,6 +28,12 @@ public class parser implements Runnable {
 			}catch(Exception e){}
 		}
 		in.close();
+	}
+
+	private void displayWelcome() {
+		displayName();
+		System.out.println("Version: "+basic.VERSION_NUMBER);
+		
 	}
 
 	static void parse(String x) {
@@ -70,15 +81,22 @@ public class parser implements Runnable {
 
 	private static void set(String[] arg) throws InterruptedException {
 		int speed = 100;
-		for (int x = 0; x < arg.length; x += 2) {
+		for (int x = 0; x < arg.length; x ++) {
 			switch (arg[x]) {
 			case "max_time":
 			case "-t":
-				core.setMaxTime(Integer.valueOf(arg[x + 1]));
+				x++;
+				core.setMaxTime(Integer.valueOf(arg[x]));
 				break;
 			case "mode":
 			case "-m":
-				core.mode = Integer.valueOf(arg[x + 1]);
+				x++;
+				core.mode = valueOf(arg[x]);
+				try{
+					System.out.println("Mode changed to: "+basic.mode_names[core.mode]);
+				}catch(Exception e){
+					
+				}	
 				break;
 			case "shut":
 				try {
@@ -89,7 +107,8 @@ public class parser implements Runnable {
 				}
 				break;
 			case "check":
-				core.check(valueOf(arg[x + 1]));
+				x++;
+				core.check(valueOf(arg[x]));
 				break;
 			case "init":
 				try {
@@ -101,60 +120,95 @@ public class parser implements Runnable {
 			case "prop":
 				System.getProperties().list(System.out);
 				break;
+			case "test":
+				core.selfTest();
+				break;
 			case "-ws":
 			case "wait":
-				core.wait_start(Integer.valueOf(arg[x + 1]));
+				x++;
+				core.wait_start(Integer.valueOf(arg[x]));
 				break;
 			case "i_wrote_this":
-				if(arg[x + 1].equals("RoboRoyal")){
+				x++;
+				if(arg[x].equals("RoboRoyal")){
 					System.out.println("yes");
 				}else{
 					System.out.println("nope");
 				}
 				break;
+			case "name":
+				displayName();
+				break;
 			case "nope":
 				System.out.println("true");
 				break;
 			case "-d":
-				movable.set_depth(Integer.valueOf(arg[x + 1]));
+				x++;
+				movable.set_depth(valueOf(arg[x]));
 				break;
 			case "forward": 
-				movable.move(speed);
+				movable.move();
 				break;
 			case "stop":
 				movable.stop();
 				break;
+			case "movable":
+				System.out.println(movable.print());
+				break;
+			case "is_run":
+				System.out.println(core.RUN);
+			case "f_roll_v":
+				x++;
+				update.force_roll_value(valueOf(arg[x]));
+				break;
+			case "f_pitch_v":
+				x++;
+				update.force_pitch_value(valueOf(arg[x]));
+				break;
 			case "max_speed":
 			case "-ms":
-				motorControle.max_speed = valueOf(arg[x + 1]);
+				x++;
+				motorControle.max_speed = valueOf(arg[x]);
 				break;
 			case "speed":
-				speed = valueOf(arg[x + 1]);
+				x++;
+				speed = valueOf(arg[x]);
 				break;
 			case "send":
-				System.out.println(update.ard_force(arg[x+1]));
+				x++;
+				System.out.println(update.ard_force(arg[x]));
 				break;
 			case "log":
-				log(arg[x+1]);
+				x++;
+				log(arg[x]);
 				break;
 			case "exit":
+				if(core.running){
+					basic.shutdown();
+				}
 				RUN = false;
 				break;
+			case "test_motors":
+				movable.motorTest();
+				break;
 			case "set_debug_lvl":
-				basic.debug_lvl = valueOf(arg[x + 1]);
+				x++;
+				basic.debug_lvl = valueOf(arg[x]);
 				break;
 			case "mot":
 				double[] motor_vals = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
 				try{
-					motor_vals[valueOf(arg[x + 1])] = speed;
-					System.out.println("Setting motor of " + basic.MOTOR_LAYOUT[valueOf(arg[x + 1])] + " to " + speed);
+					x++;
+					motor_vals[valueOf(arg[x])] = speed;
+					System.out.println("Setting motor of " + basic.MOTOR_LAYOUT[valueOf(arg[x])] + " to " + speed);
 				}catch(Exception e){
 					System.out.println("Turning off mototrs");
 				}
 				motorControle.set_motors(motor_vals);
 				break;
 			case "echo":
-				System.out.println(valueOf(arg[x + 1]));
+				x++;
+				System.out.println(valueOf(arg[x]));
 				break;
 			case "start":
 				if (core.INIT) {
@@ -214,22 +268,25 @@ public class parser implements Runnable {
 	public static void log(String me) {
 		String logFile = "output/logFile.txt";
 		StringBuilder temp = new StringBuilder();
-		try (Scanner in = new Scanner(new File(logFile))) {
-			while (in.hasNextLine()) {
-				temp.append(in.nextLine() + "\n");
-			}
-		} catch (IOException e) {
-			logger.error("Problem reading from: " + e);
-		}
-		try (Writer logOut = new BufferedWriter(new FileWriter(new File(logFile)))) {
-			temp.append(me);
+		try (Writer logOut = new BufferedWriter(new FileWriter(new File(logFile),true))) {
+			temp.append(me+"\n");
 			logOut.write(temp.toString());
 		} catch (IOException e) {
 			logger.error("Problem reading from: " + e);
 		}
 	}
 	public static String a(){
-		return "Duckbot by CMPE Robosub Team: "+basic.VERSION_NUMBER;
+		return "Duckbot v"+basic.VERSION_NUMBER+" by CMPE Robosub Team 2017-2018";
+	}
+	public static void displayName(){
+		String blackFile = "input/text_name.txt";
+		try (Scanner in = new Scanner(new File(blackFile))) {
+			String line;
+			while (in.hasNextLine()) {
+				line = in.nextLine();
+				System.out.println(line);
+			}
+		}catch(Exception e){}
 	}
 	public void run() {
 		try {
