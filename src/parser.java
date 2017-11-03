@@ -1,10 +1,6 @@
 package robosub;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Writer;
 import java.util.Scanner;
 
 import org.apache.log4j.Logger;
@@ -24,7 +20,9 @@ public class parser implements Runnable {
 		while (RUN) {
 			try{
 				System.out.print("> ");
-				parser.parse(in.nextLine());
+				String line = in.nextLine();
+				if(basic.logger_lvl > 0) debug.log("Parser line input: "+line);
+				parser.parse(line);
 			}catch(Exception e){}
 		}
 		in.close();
@@ -58,6 +56,7 @@ public class parser implements Runnable {
 	}
 
 	private static void help(int i) {
+		if(i ==0) logger.info("Please type help for more options");
 		logger.info("-t for max time(int)");
 		logger.info("-m for mode(int)");
 		logger.info("-ms [int] max speed");
@@ -76,13 +75,18 @@ public class parser implements Runnable {
 			logger.info("off");
 			logger.info("forward");
 			logger.info("check [int]");
-		}	
+			logger.info("set_dir");
+			logger.info("face");
+			logger.info("set bebug.logger level, self test, etc");
+		}
 	}
 
 	private static void set(String[] arg) throws InterruptedException {
 		int speed = 100;
 		for (int x = 0; x < arg.length; x ++) {
 			switch (arg[x]) {
+			case ""://to stop it from crashing for extra spaces
+				break;
 			case "max_time":
 			case "-t":
 				x++;
@@ -95,13 +99,27 @@ public class parser implements Runnable {
 				try{
 					System.out.println("Mode changed to: "+basic.mode_names[core.mode]);
 				}catch(Exception e){
-					
+					//guess you have invalid mode i don't know about. Enjoy
 				}	
+				break;
+			case "face":
+				x++;
+				movable.face( Integer.valueOf(arg[x]));
+				break;
+			case "set_dir":
+				x++;
+				movable.set_dir((double) Integer.valueOf(arg[x]));
+				break;
+			case "pause":
+				x++;
+				pause(Integer.valueOf(arg[x]));
 				break;
 			case "shut":
 				try {
-					basic.shutdown();
-					//RUN = false;
+					if(core.RUN){basic.shutdown();
+					}else{
+						logger.info("Nothing to shut");
+					}
 				} catch (InterruptedException e1) {
 					e1.printStackTrace();
 				}
@@ -120,8 +138,20 @@ public class parser implements Runnable {
 			case "prop":
 				System.getProperties().list(System.out);
 				break;
+			case "err":
+				x++;
+				debug.error(arg[x]);
+				break;
 			case "test":
 				core.selfTest();
+				break;
+			case "shutOnFinish":
+				x++;
+				core.shutOnFinish = (arg[x].equals("true") || arg[x].equals("t"));
+			case "waitForFinish":
+				while(core.running){
+					Thread.sleep(100);
+				}
 				break;
 			case "-ws":
 			case "wait":
@@ -180,14 +210,26 @@ public class parser implements Runnable {
 				break;
 			case "log":
 				x++;
-				log(arg[x]);
+				debug.log(arg[x]);
+				break;
+			case "log_err":
+				x++;
+				debug.log_err(arg[x]);
+				break;
+			case "de__log__":
+				//x++;
+				debug.del__log__(true);
 				break;
 			case "exit":
-				if(core.running){
+				if(core.RUN){
 					basic.shutdown();
 				}
 				RUN = false;
 				break;
+			case "update_force_water":
+					x++;
+					update.waterLvl = Integer.valueOf(arg[x]);
+					break;
 			case "test_motors":
 				movable.motorTest();
 				break;
@@ -206,9 +248,13 @@ public class parser implements Runnable {
 				}
 				motorControle.set_motors(motor_vals);
 				break;
+			case "turn_r":
+				x++;
+				movable.face_R(Integer.valueOf(x));
+				break;
 			case "echo":
 				x++;
-				System.out.println(valueOf(arg[x]));
+				System.out.println(arg[x]);
 				break;
 			case "start":
 				if (core.INIT) {
@@ -242,8 +288,10 @@ public class parser implements Runnable {
 			return 8;
 		case "cmp_sonar_nav":
 			return 12;
+		case "front_left":
 		case "fl":
 			return 0;
+		case "front_right":
 		case "fr":
 			return 1;
 		case "bl":
@@ -265,18 +313,9 @@ public class parser implements Runnable {
 		}
 		return 0;
 	}
-	public static void log(String me) {
-		String logFile = "output/logFile.txt";
-		StringBuilder temp = new StringBuilder();
-		try (Writer logOut = new BufferedWriter(new FileWriter(new File(logFile),true))) {
-			temp.append(me+"\n");
-			logOut.write(temp.toString());
-		} catch (IOException e) {
-			logger.error("Problem reading from: " + e);
-		}
-	}
 	public static String a(){
 		return "Duckbot v"+basic.VERSION_NUMBER+" by CMPE Robosub Team 2017-2018";
+		//Dakota
 	}
 	public static void displayName(){
 		String blackFile = "input/text_name.txt";
@@ -288,6 +327,9 @@ public class parser implements Runnable {
 			}
 		}catch(Exception e){}
 	}
+	public static void pause(int x){
+		try{Thread.sleep(x);}catch(Exception e){}
+	}
 	public void run() {
 		try {
 			star();
@@ -295,7 +337,6 @@ public class parser implements Runnable {
 			e.printStackTrace();
 		}
 	}
-
 	public void start() {
 		if (t == null) {
 			t = new Thread(this, "parser");
