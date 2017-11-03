@@ -1,6 +1,11 @@
 package robosub;
 
 import org.apache.log4j.Logger;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 import org.apache.log4j.BasicConfigurator;
 
 /**
@@ -18,17 +23,22 @@ public class basic {
 	private static final int TEST_MOVE_2 = 5;
 	private static final int DUMMY_MULTI = 6;
 	private static final int DUMMY = 8;// do basic setup and end
-	private static final int DUMMY2 = 10;
+	private static final int DUMMY2 = 10;//debug
 	private static final int CMP_SONAR_NAV = 12;// Competition sonar nav
 	private static boolean run = true;
-	private static core me;
+	private static core me;//this is to keep track of the thread so we can stop it for shutdown
 	public static final String[] MOTOR_LAYOUT = {"FL","FR","BL","BR","L","R"};
 	public static final String VERSION_NUMBER = "1.0.4";
 	public static int debug_lvl = 0;
+	public static int logger_lvl = 5;
 	private static Logger logger = Logger.getLogger(basic.class.getCanonicalName());
 
 	public static void main(String[] args) {
 		BasicConfigurator.configure();
+		DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+		Date date = new Date();
+		debug.log("\n*----------------------------*");
+		debug.log("System started at: "+dateFormat.format(date));
 		if (args.length > 1) {
 			System.out.print("I should add that in");
 			parser.parse(args);
@@ -39,6 +49,7 @@ public class basic {
 		}catch(Exception e){
 			logger.info("How did you manage to mess THAT up?"+e);
 			e.printStackTrace();
+			debug.log_err("They managed to mess up start: "+e.getMessage());
 		}
 	}
 
@@ -47,12 +58,13 @@ public class basic {
 		run = false;
 		try {
 			me.t.stop();
+			core.reset();
 		} catch (NullPointerException e) {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		logger.info("Successful shutdown");
-		parser.log("Shutdown");
+		debug.logWithStack("Shutdown");
 	}
 
 	public static void start_prog() {
@@ -65,9 +77,15 @@ public class basic {
 			if (!core.INIT) {
 				logger.info("Cant start without first initiating");
 			}else{
+				if(core.running)
+					throw new Exception("Core already running??: running");
 				debug.blink();
-				me = new core();
-				me.start();
+				if (me == null){
+					me = new core();
+					me.start();
+				}else{
+					me.run();
+				}
 				Thread.sleep(20);
 			}
 		} catch (Exception e) {
