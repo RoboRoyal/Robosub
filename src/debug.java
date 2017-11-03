@@ -1,8 +1,20 @@
 package robosub;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
-
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import org.apache.log4j.Logger;
+
+/*import org.apache.log4j.Layout;
+import org.apache.log4j.PatternLayout;
+import org.apache.log4j.WriterAppender;*/
 
 /*//TODO
  *https://github.com/Pi4J/pi4j/blob/master/pi4j-example/src/main/java/BlinkGpioExample.java
@@ -27,20 +39,84 @@ class debug{//blinks LED and logs errors
 	public static void blink(){
 		System.out.println("Blink");
 	}
+	public static void test(String me){
+		/*Logger logger = Logger.getLogger("logger");
+	    Layout layout = new PatternLayout();
+		StringWriter stringWriter = new StringWriter();
+	    WriterAppender writerAppender = new WriterAppender(layout, stringWriter);
+	    logger.addAppender(writerAppender);
+	    logger.info(me);*/
+	    //System.out.println(stringWriter.toString());
+	}
 	public static void error(String str){
 		movable.surface();
 		movable.surface();
-		parser.log("Aborting: Error:"+str);
+		log_err("Aborting: Error:"+str);
 		blink();
 		blink();
-		System.out.println("Error: "+str);
-		logger.error("me");
+		logger.error("Error: "+str);
+		try {
+	        throw new IOException("Thrown by debug manager; stack trace ");
+	    }
+	    catch (IOException e) {
+	    	StringWriter sw = new StringWriter();
+	    	PrintWriter pw = new PrintWriter(sw);
+	    	e.printStackTrace(pw);
+	    	String sStackTrace = sw.toString();
+	    	log("Stack trace: "+sStackTrace);
+	        e.printStackTrace();
+	    }
+		core.abort();
+	}
+	public static void log_err(String me){
+		DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+		Date date = new Date();
+	    me += " - From thread: "+Thread.currentThread()+ " at time: "+dateFormat.format(date);
+	    //System.out.println("This is it: "+me);
 		try {
 	        throw new IOException("Thrown by debug manager");
 	    }
 	    catch (IOException e) {
-	        e.printStackTrace();
+	    	StringWriter sw = new StringWriter();
+	    	PrintWriter pw = new PrintWriter(sw);
+	    	e.printStackTrace(pw);
+	    	String sStackTrace = sw.toString();
+	    	log("Error reported to debug manager: "+me);
+	    	log("Stack trace: "+sStackTrace+"\n");
 	    }
-		core.abort();
+	}
+	public static void logWithStack(String me){
+		log("[Log with stack] Stack trace: "+getStackTrace()+"\n"+me);
+	}
+	public static void log(String me) {
+		String logFile = "output/logFile.txt";
+		StringBuilder temp = new StringBuilder();
+		try (Writer logOut = new BufferedWriter(new FileWriter(new File(logFile),true))) {
+			temp.append(me+"\n");
+			logOut.write(temp.toString());
+		} catch (IOException e) {
+			logger.error("Problem writing to: " + e);
+		}finally{/*Finally*/}
+	}
+	public static void del__log__(boolean sure){
+		String logFile = "output/logFile.txt";
+		StringBuilder temp = new StringBuilder();
+		try (Writer logOut = new BufferedWriter(new FileWriter(new File(logFile)))) {
+			if(sure) temp.append("\n");
+			if(sure) logOut.write(temp.toString());
+		} catch (IOException e) {
+			logger.error("Problem writing to: " + e);
+		}finally{/*Finally*/}
+	}
+	public static String getStackTrace(){
+		try {
+	        throw new IOException("Thrown by debug manager");
+	    }
+	    catch (IOException e) {
+	    	StringWriter sw = new StringWriter();
+	    	PrintWriter pw = new PrintWriter(sw);
+	    	e.printStackTrace(pw);
+	    	return sw.toString();
+	    }
 	}
 }
