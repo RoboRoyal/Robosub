@@ -3,7 +3,7 @@ package robosub;
 import org.apache.log4j.Logger;
 
 /**
- * used to interface simple commands like turn and move to complex motor control
+ * Used to interface simple commands like turn and move to complex motor control
  * with motorControl
  * 
  * @author Dakota
@@ -11,16 +11,19 @@ import org.apache.log4j.Logger;
  */
 class movable implements Runnable {
 	Thread t;
-	static boolean run = false;
+	static boolean run = false;// Initialize to false, must be set to true
+								// before running
 	static boolean init = false;
-	static boolean stabilize = true;
+	static boolean stabilize = true;// Whether or not to actively stabilize the
+									// sub
 	private static Logger logger = Logger.getLogger(movable.class.getCanonicalName());
-	private static double target_depth = 5;
-	private static double target_direction = 0;
-	public static int speed = 100;
+	private static double target_depth = 5;// in [no unit]
+	private static double target_direction = 0;// in degrees
+	public static int speed = 80;// not max speed, just normal seed
 	public static int mode = 2;// mode 0=don't move, 1=turn, 2=move and turn, 3
 								// = move forward with no turning
-	private static double[] motors = { 0, 0, 0, 0, 0, 0 };
+	private static double[] motors = { 0, 0, 0, 0, 0, 0 };// see basic for motor
+															// names
 
 	/**
 	 * Stops movment of sub
@@ -43,9 +46,9 @@ class movable implements Runnable {
 	}
 
 	/**
-	 * Turns sub in direction of dir 
-	 * This direction is absolute(update.direction), not relative
-	 * (Updates mode to 1)
+	 * Turns sub in direction of dir This direction is
+	 * absolute(update.direction), not relative (Updates mode to 1)
+	 * 
 	 * @param dir
 	 */
 	public static void face(int dir) {
@@ -56,9 +59,9 @@ class movable implements Runnable {
 	}
 
 	/**
-	 * Turns sub in direction of dir. 
-	 * This direction is relative, not absolute
+	 * Turns sub in direction of dir. This direction is relative, not absolute
 	 * (Updates mode to 1)
+	 * 
 	 * @param dir
 	 */
 	public static void face_R(int dir) {
@@ -70,19 +73,20 @@ class movable implements Runnable {
 	}
 
 	/**
-	 * Moves sub in direction dir. Move and turns at same time
-	 * This direction is absolute(update.direction), not relative
-	 * (Updates mode to 2)
+	 * Moves sub in direction dir. Move and turns at same time This direction is
+	 * absolute(update.direction), not relative (Updates mode to 2)
+	 * 
 	 * @param dir
 	 */
 	public static void moveInDir(int dir) {
 		target_direction = dir;
 		mode = 2;
 	}
+
 	/**
-	 * Moves sub in direction dir. Move and turns at same time
-	 * This direction is relative, not absolute
-	 * (Updates mode to 2)
+	 * Moves sub in direction dir. Move and turns at same time This direction is
+	 * relative, not absolute (Updates mode to 2)
+	 * 
 	 * @param dir
 	 */
 	public static void moveInDir_R(int dir) {
@@ -90,29 +94,34 @@ class movable implements Runnable {
 		target_direction = dir;
 		mode = 2;
 	}
-/**	
- * This turns on and off stabilization of the sub using IMU data
- * Only turn off (false) if you don't trust stabilization or IMU data.
- * Default is ON (true) and best to leave it that way
- * @param boo
- */
+
+	/**
+	 * This turns on and off stabilization of the sub using IMU data Only turn
+	 * off (false) if you don't trust stabilization or IMU data. Default is ON
+	 * (true) and best to leave it that way
+	 * 
+	 * @param boo
+	 */
 	public static void stabilize(boolean boo) {
 		stabilize = boo;
 	}
-/**
- * Sets speed of sub. This speed is not in any units and there is an upper limit.
- * Don't know the limit as of writing this.
- * Default is 100, change as you wish.
- * Please no negatives
- * @param sp
- */
+
+	/**
+	 * Sets speed of sub. This speed is not in any units and there is an upper
+	 * limit. Don't know the limit as of writing this. Default is 100, change as
+	 * you wish. Please no negatives
+	 * 
+	 * @param sp
+	 */
 	public static void setSpeed(int sp) {
 		speed = sp;
 	}
-/**
- * Prints out all info on sub, used for debug.
- * @return
- */
+
+	/**
+	 * Prints out all info on sub, used for debug.
+	 * 
+	 * @return
+	 */
 	public static String print() {
 		String re = "Movable; Motors: ";
 		for (double i : motors) {
@@ -122,71 +131,86 @@ class movable implements Runnable {
 		re += " Target direction: " + target_direction;
 		re += " Mode: " + mode;
 		re += " Stabilize? " + stabilize;
+		re += " Dpth & Dir: " + update.depth + " " + update.direction;
 		return re;
 	}
-	public String toString() {//self print
+
+	public String toString() {// self print
 		return print();
 	}
 
 	/**
-	 * Forces value of specific motor pos to speed speed.
-	 * Motor positions are: "FL","FR","BL","BR","L","R"
-	 * Use with mode 0.
-	 * Only use for debug or if you know what you are doing
+	 * Forces value of specific motor pos to speed speed. Motor positions are:
+	 * "FL","FR","BL","BR","L","R" Use with mode 0. Only use for debug or if you
+	 * know what you are doing
+	 * 
 	 * @param speed
 	 * @param pos
 	 */
 	public static void set_raw_input(int speed, int pos) {
 		motors[pos] = speed;
 	}
-/**
- * Sets mode to 3.
- * This means the sub will move forward at set speed and wont turn until told to turn.
- * Used for debug.
- */
+
+	/**
+	 * Sets mode to 3. This means the sub will move forward at set speed and
+	 * wont turn until told to turn. Used for debug.
+	 */
 	public static void move() {
 		mode = 3;
 	}
-	
+
 	/**
 	 * Turns on every motor one at a time for 2 seconds each.
+	 * 
 	 * @throws InterruptedException
 	 */
-	public static void motorTest() throws InterruptedException{
-		abort();
-		for(int i = 0; i<6; i++){
+	public static void motorTest() throws InterruptedException {
+		if (!core.INIT) {
+			logger.error("Can't run test without init first");
+			return;
+		}
+		abort();// turn off all motors
+		boolean tmp = stabilize;
+		stabilize = false;
+		for (int i = 0; i < 6; i++) {
 			mode = 5;
-			set_raw_input(speed,i);
-			logger.info("Turning on motor: "+i);
+			set_raw_input(speed, i);
+			logger.info("Turning on motor: " + basic.MOTOR_LAYOUT[i]);
 			Thread.sleep(2000);
 			abort();
 		}
 		abort();
+		stabilize = tmp;
+		// TODO add reverse test for R and L motors
 	}
-/**
- * Stops and surfaces sub.
- */
+
+	/**
+	 * Stops and surfaces sub.
+	 */
 	public static void abort() {
 		stop();
 		surface();
 	}
-/**
- * Used to calculate value of left and right motor
- */
+
+	/**
+	 * Used to calculate value of left and right motor
+	 */
 	private static void internal_move() {
 		double LM = 0, RM = 0;
-		if (mode == 2) {//if move and turn set inital value to move forward
+		if (mode == 2) {// if move and turn set inital value to move forward
 			LM = speed;
 			RM = speed;
 		}
-		//if mode is 1(turn and dont move) or if we are far from correct direction, stop
+		// if mode is 1(turn and dont move) or if we are far from correct
+		// direction, stop
 		if (mode == 1 || Math.abs(update.direction - target_direction) > 30) {
 			LM = 0;
 			RM = 0;
 		}
-		//if we aren't in correct direction:
+		// if we aren't in correct direction:
 		if (!isCorrect() && mode > 0) {
-			if ((target_direction + update.direction) % 360 > 180) {// turn right
+			if ((target_direction + update.direction) % 360 > 180) {// turn
+																	// right
 				LM = LM + 5 + (target_direction + update.direction) % 360;
 				RM = RM - 5 - (target_direction + update.direction) % 360;
 			} else {// turn left
@@ -194,39 +218,45 @@ class movable implements Runnable {
 				RM = RM + 5 + (target_direction + update.direction) % 360;
 			}
 		}
-		if (mode == 3) {//if we are only suppose to move forward(mode 3) ignore everything and go forward
+		if (mode == 3) {// if we are only suppose to move forward(mode 3) ignore
+						// everything and go forward
 			LM = speed;
 			RM = speed;
 		}
-		if (LM < 0)//check to make sure there are not negatives
+		if (LM < 0)// check to make sure there are not negatives
 			LM = 0;
-		if (RM < 0)//this may be removed when negatives are implemented on ard
+		if (RM < 0)// this may be removed when negatives are implemented on ard
 			RM = 0;
-		if(mode != 5){
+		if (mode != 5) {
 			motors[4] = LM;
 			motors[5] = RM;
 		}
 	}
-/**
- * Forces mode to m.
- * Used for debugging, only use if you know what you are doing.
- * @param m
- */
+
+	/**
+	 * Forces mode to m. Used for debugging, only use if you know what you are
+	 * doing.
+	 * 
+	 * @param m
+	 */
 	public static void forceMode(int m) {
 		mode = m;
 	}
+
 	/**
 	 * Pauses the thread until sub is facing the right way.
 	 */
-	public static void waitTillTurned(){
+	public static void waitTillTurned() {
 		int itt = 0;
 		mode = 1;
-		while(!isCorrect()){
+		while (!isCorrect()) {
 			itt++;
-			try{
-				if(itt > 100){throw new Exception("Taking too long to wait for turn");}
+			try {
+				if (itt > 100) {
+					throw new Exception("Taking too long to wait for turn");
+				}
 				Thread.sleep(100);
-			}catch(Exception e){
+			} catch (Exception e) {
 				e.printStackTrace();
 				return;
 			}
@@ -234,10 +264,10 @@ class movable implements Runnable {
 	}
 
 	/**
-	 * Used to turn the sub without IMU data.
-	 * Negative values turn it left, positive values turn it right.
-	 * Amount turned corresponds to value of num.
+	 * Used to turn the sub without IMU data. Negative values turn it left,
+	 * positive values turn it right. Amount turned corresponds to value of num.
 	 * Better to use face(int) or moveInDir(int).
+	 * 
 	 * @param num
 	 */
 	public static void simpleTurn(int num) {
@@ -268,52 +298,61 @@ class movable implements Runnable {
 	public static void stop_thread() {
 		run = false;
 	}
-/**
- * Sets target depth of sub.
- * This depth may or may not correspond to any actual unit of measurement.
- * @param new_depth
- */
+
+	/**
+	 * Sets target depth of sub. This depth may or may not correspond to any
+	 * actual unit of measurement.
+	 * 
+	 * @param new_depth
+	 */
 	public static void set_depth(double new_depth) {
 		target_depth = new_depth;
 	}
 
 	/**
 	 * Used to calculate values of outer four motors.
+	 * 
 	 * @return
 	 */
 	private static double[] stable() {
-		if(mode == 5) return motors;
+		if (mode == 5)
+			return motors;
 		if (stabilize) {
 			return stable(update.get_depth(), target_depth, update.IMU_roll(), update.IMU_pitch());
 		} else {
 			return stable(update.get_depth(), target_depth);
 		}
 	}
-/**
- * Used to calculate values of outer four motors without IMU data.
- * Used when stabilize = false
- * @param current_depth
- * @param target_depth
- * @return
- */
+
+	// what am i doing at 5am? why am i working on this
+	/**
+	 * Used to calculate values of outer four motors without IMU data. Used when
+	 * stabilize = false
+	 * 
+	 * @param current_depth
+	 * @param target_depth
+	 * @return
+	 */
 	private static double[] stable(double current_depth, double target_depth) {
 		int C1 = 1;
 		int d_m = (int) ((target_depth - current_depth) * C1);
 		double[] motors = { d_m, d_m, d_m, d_m };
 		return motors;
 	}
-/**
- * Used to calculate values of outer four motors with IMU data.
- * stabilize = true
- * @param current_depth
- * @param target_depth
- * @param roll
- * @param pitch
- * @return
- */
+
+	/**
+	 * Used to calculate values of outer four motors with IMU data. stabilize =
+	 * true
+	 * 
+	 * @param current_depth
+	 * @param target_depth
+	 * @param roll
+	 * @param pitch
+	 * @return
+	 */
 	private static double[] stable(double current_depth, double target_depth, double roll, double pitch) {
 		int K = 1; // constant multiplier for calibration
-		Double FLM = 1.0, FRM = 1.0, BLM = 1.0, BRM = 1.0; // front left motor,
+		double FLM = 1.0, FRM = 1.0, BLM = 1.0, BRM = 1.0; // front left motor,
 															// etc. final value
 															// is motor speed
 		int base = 0; // base downward force to cancel out positive buoyancy
@@ -336,8 +375,9 @@ class movable implements Runnable {
 	}
 
 	/**
-	 * Returns if sub is facing within 4 degrees of direction dir.
-	 * This direction is absolute(update.direction), not relative
+	 * Returns if sub is facing within 4 degrees of direction dir. This
+	 * direction is absolute(update.direction), not relative
+	 * 
 	 * @param dir
 	 * @return
 	 */
@@ -347,9 +387,11 @@ class movable implements Runnable {
 		}
 		return false;
 	}
+
 	/**
-	 * Returns if sub is facing within 4 degrees of direction dir.
-	 * This direction is relative, not absolute
+	 * Returns if sub is facing within 4 degrees of direction dir. This
+	 * direction is relative, not absolute
+	 * 
 	 * @param dir
 	 * @return
 	 */
@@ -363,6 +405,7 @@ class movable implements Runnable {
 
 	/**
 	 * REturns if sub is facing within 4 degrees of target direction
+	 * 
 	 * @return
 	 */
 	public static boolean isCorrect() {
@@ -373,18 +416,20 @@ class movable implements Runnable {
 	}
 
 	/**
-	 * Sets target direction of sub without changing mode.
-	 * This direction is absolute(update.direction), not relative.
-	 * Better to use face() or moveInDir().
+	 * Sets target direction of sub without changing mode. This direction is
+	 * absolute(update.direction), not relative. Better to use face() or
+	 * moveInDir().
+	 * 
 	 * @param dir
 	 */
 	public static void set_dir(double dir) {
 		target_direction = dir;
 	}
+
 	/**
-	 * Sets target direction of sub without changing mode.
-	 * This direction is relative, not absolute.
-	 * Better to use face() or moveInDir().
+	 * Sets target direction of sub without changing mode. This direction is
+	 * relative, not absolute. Better to use face() or moveInDir().
+	 * 
 	 * @param dir
 	 */
 	public static void set_dir_R(double dir) {
@@ -418,7 +463,49 @@ class movable implements Runnable {
 		double[] motors = { LM, RM };
 		return motors;
 	}
-	
+
+	@SuppressWarnings("unused")
+	private static void stable_cal() throws InterruptedException {
+		double roll_cal_total = 0;
+		double pitch_cal_total = 0;
+		for (int x = 0; x < 50; x++) {
+			pitch_cal_total += update.IMU_pitch();
+			roll_cal_total += update.IMU_roll();
+			Thread.sleep(5);
+		}
+		// double roll_cal = roll_cal_total/100;//calibration for IMU
+		// double pitch_cal = pitch_cal_total/100;
+	}
+
+	/**
+	 * Main method of movable; calls stable() and internal_move(); Then sets
+	 * motors to correct value using motorControle
+	 */
+	private void norm() {
+		int div = 0;
+		while (run) {
+			if (div == 10000)
+				div = -1;
+			div++;
+			double[] tmp = stable();
+			for (int i = 0; i < 4; i++) {
+				motors[i] = tmp[i];
+			}
+			internal_move();
+			if (basic.debug_lvl > 10) {
+				logger.info(this.toString());
+			}
+			if ((basic.logger_lvl > 6 && div % 10 == 0) || (basic.logger_lvl > 9))
+				debug.log(this.toString());
+			motorControle.set_motors(motors);// TODO
+			try {
+				Thread.sleep(90);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
 	@Override
 	public void run() {
 		logger.info("Initilizing stabilization");
@@ -435,43 +522,12 @@ class movable implements Runnable {
 		logger.info("Shutting down sub stabilization");
 	}
 
-	@SuppressWarnings("unused")
-	private static void stable_cal() throws InterruptedException {
-		double roll_cal_total = 0;
-		double pitch_cal_total = 0;
-		for (int x = 0; x < 50; x++) {
-			pitch_cal_total += update.IMU_pitch();
-			roll_cal_total += update.IMU_roll();
-			Thread.sleep(5);
-		}
-		// double roll_cal = roll_cal_total/100;//calibration for IMU
-		// double pitch_cal = pitch_cal_total/100;
-	}
-/**
- * Main method of movable; calls stable() and internal_move();
- * Then sets motors to correct value using motorControle
- */
-	private void norm() {
-		while (run) {
-			double[] tmp = stable();
-			for (int i = 0; i < 4; i++) {
-				motors[i] = tmp[i];
-			}
-			internal_move();
-			if(basic.debug_lvl > 10){logger.info(this.toString());}
-			motorControle.set_motors(motors);// TODO
-			try {
-				Thread.sleep(90);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
-	}
-
 	public void start() {
 		if (t == null) {
 			t = new Thread(this, "movable");
 			t.start();
+		} else {
+			debug.logWithStack("Second instance being made: movable");
 		}
 	}
 
