@@ -18,7 +18,7 @@ import com.pi4j.io.serial.SerialPortException;
  */
 @SuppressWarnings("unused")
 class update implements Runnable{//interface with sensors
-    Thread t;
+    static Thread t;
     static int mod = 0;
     static int init = 0;
     static String ard;
@@ -59,12 +59,6 @@ class update implements Runnable{//interface with sensors
         return IMU_pitch;
     }
     
-    public void start() {
-        if (t == null) {
-            t = new Thread(this, "update");
-            t.start();
-         }
-    }
     @Override
     public void run(){//TODO
     	while(run){
@@ -146,6 +140,7 @@ class update implements Runnable{//interface with sensors
                    direction = Integer.parseInt(me.split(",")[4].trim());
                }else{
                    System.out.println("Bad input from ard: "+me);
+                   debug.log("Bad input from ard: "+me);
                }
            }   
        }
@@ -184,6 +179,7 @@ class update implements Runnable{//interface with sensors
         }
         if(!input.trim().equalsIgnoreCase(good_string.trim())){
             System.out.println("Bad input from ard on st " + input);
+            debug.log_err("Bad input from ard on st " + input);
             return false;
         }else{
             
@@ -223,6 +219,14 @@ class update implements Runnable{//interface with sensors
     }
     public static void force_pitch_value(int x){
     	IMU_pitch = x;
+    }
+    public void start() {
+        if (t == null) {
+            t = new Thread(this, "update");
+            t.start();
+        }else{
+       	 debug.logWithStack("Second instance being made: update");
+        }
     }
 }
 
