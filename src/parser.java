@@ -117,6 +117,8 @@ public class parser implements Runnable {
 			case "shut":
 				try {
 					if(core.RUN){basic.shutdown();
+					}else if(core.INIT){
+						basic.shutdown();
 					}else{
 						logger.info("Nothing to shut");
 					}
@@ -221,7 +223,7 @@ public class parser implements Runnable {
 				debug.del__log__(true);
 				break;
 			case "exit":
-				if(core.RUN){
+				if(core.INIT){
 					basic.shutdown();
 				}
 				RUN = false;
