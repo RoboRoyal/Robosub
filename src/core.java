@@ -150,6 +150,8 @@ public class core implements Runnable {
 		//we are no logging running even if we have permission to
 		//we have to wait to be restarted
 		running = false;
+		//Stop for now
+		movable.stop();
 	}
 
 	private static boolean test2(int step) {
