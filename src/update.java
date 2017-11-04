@@ -2,6 +2,8 @@ package robosub;
 
 import java.io.IOException;
 
+import org.apache.log4j.Logger;
+
 //import org.apache.log4j.Logger;//TODO
 
 /*import com.pi4j.io.serial.Serial;//TODO
@@ -25,13 +27,13 @@ class update implements Runnable{//interface with sensors
     static String port;
     static int br;
     /*static Serial serial;*/
-    static String output = "[v";
+    private static String output = "[v";
     static String input = "def";
     static boolean ready = false;
-    static int IMU_pitch = 0, IMU_roll = 0, depth = 0, waterLvl = 0, direction = 0;
+    static int IMU_pitch = 0, IMU_roll = 0, IMU_YAW = 0, depth = 0, waterLvl = 0, direction = 0;
     static boolean run = false;
     static double[] motor_stop = {0,0,0,0,0,0};
-    //private static Logger logger = Logger.getLogger(update.class.getCanonicalName());
+    private static Logger logger = Logger.getLogger(update.class.getCanonicalName());
     public static double get_depth(){
         return depth;
     }
@@ -67,8 +69,8 @@ class update implements Runnable{//interface with sensors
     		try{
         		Thread.sleep(100);
         	}catch(Exception e){
-                //debug.error(e.getMessage());
-                System.out.println(e);
+                debug.error(e.getMessage());
+                logger.error(e);
             }
     	}
     	/*long start = System.currentTimeMillis();
@@ -79,13 +81,13 @@ class update implements Runnable{//interface with sensors
                     	start = System.currentTimeMillis();
                         //System.out.println("writing");
                         mod++;
-    					if(mod%20==0 && basic.debug_lvl > 5) System.out.println("Sending packet: "+mod+" as: "+output);
+    					if(mod%20==0 && basic.debug_lvl > 9) logger.info("Sending packet: "+mod+" as: "+output);
                         serial.write(output);
                         Thread.sleep(80);
                     }
                 }catch(Exception e){
-                    //debug.error(e.getMessage());
-                    System.out.println(e);
+                    debug.logWithStack("Problem with serial in updater: "+e.getMessage());
+                    logger.error(e);
                 }
             } 
         }
@@ -95,8 +97,8 @@ class update implements Runnable{//interface with sensors
     	try{
     		Thread.sleep(100);
     	}catch(Exception e){
-            //debug.error(e.getMessage());
-            System.out.println(e);
+            debug.error(e.getMessage());
+            logger.error(e);
         }
     }
     public static void setUp(){
@@ -135,9 +137,9 @@ class update implements Runnable{//interface with sensors
                if(me.split(",").length == 4){
                    IMU_pitch = Integer.parseInt(me.split(",")[0].trim());
                    IMU_roll = Integer.parseInt(me.split(",")[1].trim());
-                   depth = Integer.parseInt(me.split(",")[2].trim());
-                   waterLvl = Integer.parseInt(me.split(",")[3].trim());
-                   direction = Integer.parseInt(me.split(",")[4].trim());
+                   direction = Integer.parseInt(me.split(",")[2].trim());
+                   depth = Integer.parseInt(me.split(",")[3].trim());
+                   waterLvl = Integer.parseInt(me.split(",")[4].trim());        
                }else{
                    System.out.println("Bad input from ard: "+me);
                    debug.log("Bad input from ard: "+me);
@@ -147,14 +149,16 @@ class update implements Runnable{//interface with sensors
     }
     public static void set_motors(double[] x){
         ready = false;
-        output = "[n";
+        String newString;
+        newString = "[n";
         for(int i = 0; i<6; i++){
-            output += (int)(x[i]);
-            output += ",";
+        	newString += (int)(x[i]);
+        	newString += ",";
         }
         if(!core.RUN){//dont let motors turn on unless we are running
-        	output = "[v";
+        	newString = "[v";
         }
+        set(newString);
         ready = true;
     }
     public static boolean self_test(){
@@ -163,10 +167,11 @@ class update implements Runnable{//interface with sensors
     	}
     	return true;
         /*ready = false;//TODO
-        output = "[t";
+        String newString = "[t";
         int test_num = (int) (Math.random()*122);
-        output += test_num;
-        output += ",";
+        newString += test_num;
+        newString += ",";
+        set(newString);
         ready = true;
         String good_string = "Running self test: " + test_num;
         //System.out.println("Test string is: "+good_string);
@@ -175,19 +180,19 @@ class update implements Runnable{//interface with sensors
                 Thread.sleep(5);
         	}
         }catch(Exception e){
-            System.out.println(e.getMessage());
+            System.out.println("This is kinda bad; thread interupt in update: "e.getMessage());
         }
         if(!input.trim().equalsIgnoreCase(good_string.trim())){
             System.out.println("Bad input from ard on st " + input);
             debug.log_err("Bad input from ard on st " + input);
-            return false;
+            return false;//no coms = bad
         }else{
             
             return true;
         }*/
     }
     public static void force_out(String i){
-        output = i;
+        set(i);
     }
     public static String force_in(){
         return input;
@@ -200,9 +205,9 @@ class update implements Runnable{//interface with sensors
     public static void stop(){
     	//motorControle.set_motors(motor_stop);
     	try{
-        	output = "[n0,0,0,0,0,0";
+        	set("[n0,0,0,0,0,0");
     		Thread.sleep(120);
-    		output = "[s1,";
+    		set("[s1,");
     		//TODO send shut command
     		Thread.sleep(120);
     		//serial.close();//TODO
@@ -220,6 +225,9 @@ class update implements Runnable{//interface with sensors
     public static void force_pitch_value(int x){
     	IMU_pitch = x;
     }
+    private static void set(String newOutputString){
+    	output = newOutputString;
+    }
     public void start() {
         if (t == null) {
             t = new Thread(this, "update");
@@ -233,3 +241,4 @@ class update implements Runnable{//interface with sensors
 //set_debug_lvl 8 init 1 -t 1000 start
 //https://github.com/OlivierLD/raspberry-pi4j-samples/blob/master/Arduino.RaspberryPI/src/arduino/raspberrypi/SerialReaderWriter.java
 //http://www.lediouris.net/RaspberryPI/Arduino/RPi.read.Arduino/readme.html
+//http://bildr.org/2012/03/stable-orientation-digital-imu-6dof-arduino/
