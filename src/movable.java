@@ -497,7 +497,7 @@ class movable implements Runnable {
 			}
 			if ((basic.logger_lvl > 6 && div % 10 == 0) || (basic.logger_lvl > 9))
 				debug.log(this.toString());
-			motorControle.set_motors(motors);// TODO
+			motorControle.set_motors(motors);// TODO Get rid of motorControle?
 			try {
 				Thread.sleep(90);
 			} catch (InterruptedException e) {
