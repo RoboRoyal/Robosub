@@ -28,7 +28,7 @@ public class basic {
 	private static boolean run = true;
 	private static core me;//this is to keep track of the thread so we can stop it for shutdown
 	public static final String[] MOTOR_LAYOUT = {"FL","FR","BL","BR","L","R"};
-	public static final String VERSION_NUMBER = "1.0.4";
+	public static final String VERSION_NUMBER = "1.0.5";//added support for multiple starts
 	public static int debug_lvl = 0;
 	public static int logger_lvl = 5;
 	private static Logger logger = Logger.getLogger(basic.class.getCanonicalName());
@@ -43,13 +43,17 @@ public class basic {
 			System.out.print("I should add that in");
 			parser.parse(args);
 		}
-		parser me = new parser();
+		parser me2 = new parser();
 		try{
-			me.start();
+			me2.start();
+			if(core.running || core.RUN || core.INIT){
+				logger.error("Parser ended while system still running");
+				throw new Exception("Parser ended while system still running");
+			}
 		}catch(Exception e){
 			logger.info("How did you manage to mess THAT up?"+e);
 			e.printStackTrace();
-			debug.log_err("They managed to mess up start: "+e.getMessage());
+			debug.error("They managed to mess up start: "+e.getMessage());
 		}
 	}
 
@@ -57,14 +61,14 @@ public class basic {
 		core.shutdown();
 		run = false;
 		try {
-			me.t.stop();
+			me.t.stop();//may be not needed
 			core.reset();
 		} catch (NullPointerException e) {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		logger.info("Successful shutdown");
-		debug.logWithStack("Shutdown");
+		debug.logWithStack("Successful shutdown: with stack");
 	}
 
 	public static void start_prog() {
@@ -90,7 +94,7 @@ public class basic {
 			}
 		} catch (Exception e) {
 			logger.error(e);
-			debug.error(e.getMessage());
+			debug.log_err(e.getMessage());
 		}
 	}
 
