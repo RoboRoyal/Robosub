@@ -1,0 +1,5 @@
+This is only for use on Mac and Windows.
+This does not interface serial connection, it just outputs info to a text file.
+For use of Raspberry Pi, install pi4j on the pi and do not include this library. 
+
+http://pi4j.com/
