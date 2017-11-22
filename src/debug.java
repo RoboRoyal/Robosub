@@ -10,15 +10,15 @@ import java.io.Writer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import org.apache.log4j.Logger;
+//import org.apache.log4j.Logger;
 
 /*import org.apache.log4j.Layout;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.WriterAppender;*/
 
 /*//TODO
- *https://github.com/Pi4J/pi4j/blob/master/pi4j-example/src/main/java/BlinkGpioExample.java
- * import com.pi4j.io.gpio.GpioController;
+*https://github.com/Pi4J/pi4j/blob/master/pi4j-example/src/main/java/BlinkGpioExample.java
+* import com.pi4j.io.gpio.GpioController;
 import com.pi4j.io.gpio.GpioFactory;
 import com.pi4j.io.gpio.GpioPinDigitalInput;
 import com.pi4j.io.gpio.GpioPinDigitalOutput;
@@ -26,16 +26,16 @@ import com.pi4j.io.gpio.PinPullResistance;
 import com.pi4j.io.gpio.RaspiPin;
 import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
 import com.pi4j.io.gpio.event.GpioPinListenerDigital;
- */
+*/
 
 //@SuppressWarnings("unused")
 /**
- * Helper class for extra debugging 
- * @author Dakota
- *
- */
+* Helper class for extra debugging 
+* @author Dakota
+*
+*/
 class debug{//blinks LED and logs errors
-	private static Logger logger = Logger.getLogger(debug.class.getCanonicalName());
+	//private static Logger logger = Logger.getLogger(debug.class.getCanonicalName());
 	public static void blink(){
 		System.out.println("Blink");
 	}
@@ -45,7 +45,7 @@ class debug{//blinks LED and logs errors
 		StringWriter stringWriter = new StringWriter();
 	    WriterAppender writerAppender = new WriterAppender(layout, stringWriter);
 	    logger.addAppender(writerAppender);
-	    logger.info(me);*/
+	    System.out.print(me);*/
 	    //System.out.println(stringWriter.toString());
 	}
 	public static void error(String str){
@@ -54,7 +54,7 @@ class debug{//blinks LED and logs errors
 		log_err("Aborting: Error:"+str);
 		blink();
 		blink();
-		logger.error("Error: "+str);
+		System.out.print("Error: "+str);
 		try {
 	        throw new IOException("Thrown by debug manager; stack trace ");
 	    }
@@ -95,7 +95,7 @@ class debug{//blinks LED and logs errors
 			temp.append(me+"\n");
 			logOut.write(temp.toString());
 		} catch (IOException e) {
-			logger.error("Problem writing to: " + e);
+			System.out.print("Problem writing to: " + e);
 		}finally{/*Finally*/}
 	}
 	public static void del__log__(boolean sure){
@@ -105,7 +105,7 @@ class debug{//blinks LED and logs errors
 			if(sure) temp.append("\n");
 			if(sure) logOut.write(temp.toString());
 		} catch (IOException e) {
-			logger.error("Problem writing to: " + e);
+			System.out.print("Problem writing to: " + e);
 		}finally{/*Finally*/}
 	}
 	public static String getStackTrace(){
