@@ -2,43 +2,41 @@ package robosub;
 
 import java.io.IOException;
 
-import org.apache.log4j.Logger;
-
-//import org.apache.log4j.Logger;//TODO
-
-/*import com.pi4j.io.serial.Serial;//TODO
+import com.pi4j.io.serial.Serial;
 import com.pi4j.io.serial.SerialFactory;
 import com.pi4j.io.serial.SerialPortException;
-*/
+
 
 /**
  * Directly interfaces with Arduino
- * Most of it is commented out since pi4j is only available on pi
+ * A dummy library is avalable for Win, Mac, and Linx when not running on the PI. This
+ * will simply print the output packets to a text file. 
+ * DO NOT put port these dummy libraries to the PI.
  * Be careful when changing anything in this class, espeshally setUp, parseIn, self_test and run
  * @author Dakota
  *
  */
 @SuppressWarnings("unused")
 class update implements Runnable{//interface with sensors
+	static boolean IS_PI;
     static Thread t;
     static int mod = 0;
     static int init = 0;
     static String ard;
     static String port;
     static int br;
-    /*static Serial serial;*/
+    static Serial serial;
     private static String output = "[v";
     static String input = "def";
     static boolean ready = false;
     static int IMU_pitch = 0, IMU_roll = 0, IMU_YAW = 0, depth = 0, waterLvl = 0, direction = 0;
     static boolean run = false;
     static double[] motor_stop = {0,0,0,0,0,0};
-    private static Logger logger = Logger.getLogger(update.class.getCanonicalName());
+    //private static Logger logger = Logger.getLogger(update.class.getCanonicalName());
     public static double get_depth(){
         return depth;
     }
     public static double getWaterSensor() {
-        // TODO Auto-generated method stub
         //checks if we are taking on water
         return waterLvl;
     }
@@ -62,18 +60,18 @@ class update implements Runnable{//interface with sensors
     }
     
     @Override
-    public void run(){//TODO
-    	while(run){
+    public void run(){
+    	/*while(run){
     		mod++;
     		if(mod%1==0 && basic.debug_lvl > 5) System.out.println("Sending packet: "+mod+" as: "+output);
     		try{
         		Thread.sleep(100);
         	}catch(Exception e){
                 debug.error(e.getMessage());
-                logger.error(e);
+                System.out.print(e);
             }
-    	}
-    	/*long start = System.currentTimeMillis();
+    	}*/
+    	long start = System.currentTimeMillis();
         while(run){
             if(serial.isOpen()){
                 try{
@@ -81,52 +79,65 @@ class update implements Runnable{//interface with sensors
                     	start = System.currentTimeMillis();
                         //System.out.println("writing");
                         mod++;
-    					if(mod%20==0 && basic.debug_lvl > 9) logger.info("Sending packet: "+mod+" as: "+output);
+    					if(mod%20==0 && basic.debug_lvl > 9) System.out.println("Sending packet: "+mod+" as: "+output);
                         serial.write(output);
                         Thread.sleep(80);
                     }
                 }catch(Exception e){
                     debug.logWithStack("Problem with serial in updater: "+e.getMessage());
-                    logger.error(e);
+                    System.out.print(e);
                 }
             } 
         }
         synchronized(t){
             t.notify();
-        }*/
+        }
     	try{
     		Thread.sleep(100);
     	}catch(Exception e){
             debug.error(e.getMessage());
-            logger.error(e);
+            System.out.print(e);
         }
     }
-    public static void setUp(){
+    public static void setUp(boolean PI){
+    	IS_PI = PI;
         ready = true;
         run = true;
         System.out.println("Setting up serial coms...");
         ard = "/dev/ttyACM0";
         port = System.getProperty("serial.port", ard);
-        br = Integer.parseInt(System.getProperty("baud.rate", "1200"));
-        /*serial = SerialFactory.createInstance();//TODO
-        serial.addListener(event -> {
-            String payload;
-            try {
-                payload = event.getAsciiString();
-            } catch (IOException ioe) {
-                throw new RuntimeException(ioe);
-            }
-            parseIn(payload);
-        });
+        br = Integer.parseInt(System.getProperty("baud.rate", "4800"));
+        serial = SerialFactory.createInstance();
+        if(PI){
+        	serial.addListener(event -> {
+                String payload;
+                try {
+                    payload = event.getAsciiString();
+                } catch (IOException ioe) {
+                    System.out.println("Failed to connect to arduino "+ioe.getMessage());
+                    debug.log_err("Failed to connect to arduino "+ioe.getMessage());
+                    throw new RuntimeException(ioe);
+                }
+                parseIn(payload);
+            });
+        }
         System.out.println("Opening port [" + port + ":" + Integer.toString(br) + "]");
         try {
             serial.open(port, br);
         } catch (IOException ioe) {
+        	System.out.println("Error");
             throw new RuntimeException(ioe);
-        }*/
+        
+    }catch(Exception e){
+    	System.out.println("Error is: "+e.getMessage());
+    }
         System.out.println("Port is opened.");
     }
-    public static void parseIn(String me){
+    public static void force_update_parseIn(String me){
+    	parseIn(me);
+    }
+    private static void parseIn(String me){
+    	if(basic.logger_lvl > 10) debug.log("String recieved from serial @: "+System.currentTimeMillis()+" : "+me);
        if(!me.equals(input)){
     	   init = 2;
     	   //System.out.println("i got something: "+me);
@@ -134,7 +145,7 @@ class update implements Runnable{//interface with sensors
            if(input.length() >= 10 && me.startsWith("Running self test")){
                return;
            }else{
-               if(me.split(",").length == 4){
+               if(me.split(",").length == 5){
                    IMU_pitch = Integer.parseInt(me.split(",")[0].trim());
                    IMU_roll = Integer.parseInt(me.split(",")[1].trim());
                    direction = Integer.parseInt(me.split(",")[2].trim());
@@ -162,11 +173,11 @@ class update implements Runnable{//interface with sensors
         ready = true;
     }
     public static boolean self_test(){
-    	if(core.no_fill()){
+    	if(core.no_fill() || !IS_PI){
     		return true;
     	}
-    	return true;
-        /*ready = false;//TODO
+    	//return true;
+        ready = false;
         String newString = "[t";
         int test_num = (int) (Math.random()*122);
         newString += test_num;
@@ -180,7 +191,7 @@ class update implements Runnable{//interface with sensors
                 Thread.sleep(5);
         	}
         }catch(Exception e){
-            System.out.println("This is kinda bad; thread interupt in update: "e.getMessage());
+            System.out.println("This is kinda bad; thread interupt in update: "+e.getMessage());
         }
         if(!input.trim().equalsIgnoreCase(good_string.trim())){
             System.out.println("Bad input from ard on st " + input);
@@ -189,7 +200,7 @@ class update implements Runnable{//interface with sensors
         }else{
             
             return true;
-        }*/
+        }
     }
     public static void force_out(String i){
         set(i);
@@ -205,12 +216,12 @@ class update implements Runnable{//interface with sensors
     public static void stop(){
     	//motorControle.set_motors(motor_stop);
     	try{
-        	set("[n0,0,0,0,0,0");
+        	set("[n1500,1500,1500,1500,1500,1500");
     		Thread.sleep(120);
     		set("[s1,");
     		//TODO send shut command
     		Thread.sleep(120);
-    		//serial.close();//TODO
+    		serial.close();
     	}catch(Exception e){
     		debug.error(e.getMessage());
     	}
@@ -226,6 +237,7 @@ class update implements Runnable{//interface with sensors
     	IMU_pitch = x;
     }
     private static void set(String newOutputString){
+    	if(basic.logger_lvl > 10) debug.log("Setting update.output @ : "+System.currentTimeMillis()+" : "+newOutputString);
     	output = newOutputString;
     }
     public void start() {
