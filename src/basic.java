@@ -1,12 +1,12 @@
 package robosub;
 
-import org.apache.log4j.Logger;
+//import org.apache.log4j.Logger;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import org.apache.log4j.BasicConfigurator;
+//import org.apache.log4j.BasicConfigurator;
 
 /**
  * Holds the most basic functions but mostly helps initiate and shutdown
@@ -28,17 +28,31 @@ public class basic {
 	private static boolean run = true;
 	private static core me;//this is to keep track of the thread so we can stop it for shutdown
 	public static final String[] MOTOR_LAYOUT = {"FL","FR","BL","BR","L","R"};
-	public static final String VERSION_NUMBER = "1.0.5";//added support for multiple starts
+	public static final String VERSION_NUMBER = "1.1.2";//works with pi
 	public static int debug_lvl = 0;
 	public static int logger_lvl = 5;
-	private static Logger logger = Logger.getLogger(basic.class.getCanonicalName());
+	//private static Logger logger = Logger.getLogger(basic.class.getCanonicalName());
 
 	public static void main(String[] args) {
-		BasicConfigurator.configure();
+		//BasicConfigurator.configure();
+		try{
+			master(args);
+		}catch(Throwable e){//trust me, catch throwable jic
+			e.printStackTrace();
+			System.out.println(e);
+			debug.error(e.getMessage());
+		}finally{
+			System.out.println("End of Main");
+		}
+
+	}
+
+	private static void master(String[] args) {
 		DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 		Date date = new Date();
 		debug.log("\n*----------------------------*");
 		debug.log("System started at: "+dateFormat.format(date));
+		debug.log("System started at: "+System.currentTimeMillis());
 		if (args.length > 1) {
 			System.out.print("I should add that in");
 			parser.parse(args);
@@ -47,27 +61,29 @@ public class basic {
 		try{
 			me2.start();
 			if(core.running || core.RUN || core.INIT){
-				logger.error("Parser ended while system still running");
+				System.out.print("Parser ended while system still running");
 				throw new Exception("Parser ended while system still running");
 			}
 		}catch(Exception e){
-			logger.info("How did you manage to mess THAT up?"+e);
+			System.out.print("How did you manage to mess THAT up?: "+e);
 			e.printStackTrace();
 			debug.error("They managed to mess up start: "+e.getMessage());
 		}
+		
 	}
 
 	public static void shutdown() throws InterruptedException {
 		core.shutdown();
 		run = false;
 		try {
-			me.t.stop();//may be not needed
+			Thread.sleep(50);//allow time for thread to end correctly
+			if(core.t!=null) core.t.stop();//may be not needed-but ensure it ends
 			core.reset();
 		} catch (NullPointerException e) {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		logger.info("Successful shutdown");
+		System.out.print("Successful shutdown");
 		debug.logWithStack("Successful shutdown: with stack");
 	}
 
@@ -79,7 +95,8 @@ public class basic {
 		System.out.println("Started by: "+System.getProperty("user.name"));
 		try {
 			if (!core.INIT) {
-				logger.info("Cant start without first initiating");
+				System.out.print("Cant start without first initiating");
+				throw new Exception("basic.start() called without first inititilizing");
 			}else{
 				if(core.running)
 					throw new Exception("Core already running??: running");
@@ -93,7 +110,7 @@ public class basic {
 				Thread.sleep(20);
 			}
 		} catch (Exception e) {
-			logger.error(e);
+			System.out.print(e);
 			debug.log_err(e.getMessage());
 		}
 	}
@@ -107,7 +124,7 @@ public class basic {
 				Thread.sleep(800);
 			}
 		} catch (Exception e) {
-			logger.error(e);
+			System.out.print(e);
 			debug.error(e.getMessage());
 		}
 		start();
