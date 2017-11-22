@@ -1,6 +1,6 @@
 package robosub;
 
-import org.apache.log4j.Logger;
+//import org.apache.log4j.Logger;
 
 /**
  * Used to interface simple commands like turn and move to complex motor control
@@ -16,33 +16,41 @@ class movable implements Runnable {
 	static boolean init = false;
 	static boolean stabilize = true;// Whether or not to actively stabilize the
 									// sub
-	private static Logger logger = Logger.getLogger(movable.class.getCanonicalName());
+	//private static Logger logger = Logger.getLogger(movable.class.getCanonicalName());
 	private static double target_depth = 5;// in [no unit]
 	private static double target_direction = 0;// in degrees
-	public static int speed = 80;// not max speed, just normal seed
-	public static int mode = 2;// mode 0=don't move, 1=turn, 2=move and turn, 3
-								// = move forward with no turning
-	private static double[] motors = { 0, 0, 0, 0, 0, 0 };// see basic for motor
+	public static int speed = 150;// not max speed, just normal seed
+	private static final int base_speed = 1500;
+	public static int mode = 0;// mode 0=don't move, 1=turn, 2=move and turn, 3
+								// = move forward with no turning, 5= no update
+	private static double[] motors = { base_speed, base_speed, base_speed, base_speed, base_speed, base_speed };// see basic for motor
 															// names
 
 	/**
 	 * Stops movment of sub
 	 */
 	public static void stop() {
-		motors[4] = 0;
-		motors[5] = 0;
+		motors[4] = base_speed;
+		motors[5] = base_speed;
 		mode = 0;
+	}
+	public static void quickSurface(){
+		motors[0] = base_speed - 100;
+		motors[1] = base_speed - 100;
+		motors[2] = base_speed - 100;
+		motors[3] = base_speed - 100;
+		target_depth = -50;
 	}
 
 	/**
 	 * Brings sub to surface
 	 */
 	public static void surface() {
-		motors[0] = 0;
-		motors[1] = 0;
-		motors[2] = 0;
-		motors[3] = 0;
-		target_depth = -10;
+		motors[0] = base_speed;
+		motors[1] = base_speed;
+		motors[2] = base_speed;
+		motors[3] = base_speed;
+		target_depth = 0;
 	}
 
 	/**
@@ -143,7 +151,7 @@ class movable implements Runnable {
 	 * Forces value of specific motor pos to speed speed. Motor positions are:
 	 * "FL","FR","BL","BR","L","R" Use with mode 0. Only use for debug or if you
 	 * know what you are doing
-	 * 
+	 * As a further note, using motorControle.set_motors might be better
 	 * @param speed
 	 * @param pos
 	 */
@@ -166,22 +174,31 @@ class movable implements Runnable {
 	 */
 	public static void motorTest() throws InterruptedException {
 		if (!core.INIT) {
-			logger.error("Can't run test without init first");
+			System.out.print("Can't run test without init first");
 			return;
 		}
 		abort();// turn off all motors
 		boolean tmp = stabilize;
+		int tmp2 = mode;
 		stabilize = false;
 		for (int i = 0; i < 6; i++) {
 			mode = 5;
-			set_raw_input(speed, i);
-			logger.info("Turning on motor: " + basic.MOTOR_LAYOUT[i]);
+			set_raw_input(base_speed + speed, i);
+			System.out.println("Turning on motor: " + basic.MOTOR_LAYOUT[i] + " @: "+(base_speed + speed));
 			Thread.sleep(2000);
 			abort();
 		}
 		abort();
+		mode = 5;
+		Thread.sleep(110);
+		System.out.println("Now reversing both motors");
+		set_raw_input((base_speed - speed), 4);
+		set_raw_input((base_speed - speed), 5);
+		Thread.sleep(2000);
+		abort();
 		stabilize = tmp;
-		// TODO add reverse test for R and L motors
+		mode = tmp2;
+		System.out.println("All motors should no be at rest.");
 	}
 
 	/**
@@ -196,37 +213,37 @@ class movable implements Runnable {
 	 * Used to calculate value of left and right motor
 	 */
 	private static void internal_move() {
-		double LM = 0, RM = 0;
+		double LM = base_speed, RM = base_speed;
 		if (mode == 2) {// if move and turn set inital value to move forward
-			LM = speed;
-			RM = speed;
+			LM = base_speed + speed;
+			RM = base_speed + speed;
 		}
 		// if mode is 1(turn and dont move) or if we are far from correct
 		// direction, stop
 		if (mode == 1 || Math.abs(update.direction - target_direction) > 30) {
-			LM = 0;
-			RM = 0;
+			LM = base_speed;
+			RM = base_speed;
 		}
 		// if we aren't in correct direction:
 		if (!isCorrect() && mode > 0) {
-			if ((target_direction + update.direction) % 360 > 180) {// turn
+			if ((target_direction + update.direction) % 360 < 180) {// turn
 																	// right
-				LM = LM + 5 + (target_direction + update.direction) % 360;
-				RM = RM - 5 - (target_direction + update.direction) % 360;
+				LM = LM + 25 + 2*(180 - Math.abs(Math.abs(target_direction - update.direction) - 180));
+				RM = RM - 25 - 2*(180 - Math.abs(Math.abs(target_direction - update.direction) - 180));
 			} else {// turn left
-				LM = LM - 5 - (target_direction + update.direction) % 360;
-				RM = RM + 5 + (target_direction + update.direction) % 360;
+				LM = LM - 25 - 2*(180 - Math.abs(Math.abs(target_direction - update.direction) - 180));
+				RM = RM + 25 + 2*(180 - Math.abs(Math.abs(target_direction - update.direction) - 180));
 			}
 		}
 		if (mode == 3) {// if we are only suppose to move forward(mode 3) ignore
 						// everything and go forward
-			LM = speed;
-			RM = speed;
+			LM = base_speed + speed;
+			RM = base_speed + speed;
 		}
-		if (LM < 0)// check to make sure there are not negatives
-			LM = 0;
+		/*if (LM < 0)// check to make sure there are not negatives
+			LM = base_speed;
 		if (RM < 0)// this may be removed when negatives are implemented on ard
-			RM = 0;
+			RM = base_speed;*/
 		if (mode != 5) {
 			motors[4] = LM;
 			motors[5] = RM;
@@ -252,7 +269,7 @@ class movable implements Runnable {
 		while (!isCorrect()) {
 			itt++;
 			try {
-				if (itt > 100) {
+				if (itt > 200) {//20 seconds
 					throw new Exception("Taking too long to wait for turn");
 				}
 				Thread.sleep(100);
@@ -276,9 +293,9 @@ class movable implements Runnable {
 		int LM = 0, RM = 0;
 		for (int i = 0; i < Math.abs(num); i++) {
 			if (num > 0) {
-				LM = speed;
+				LM = base_speed + speed;
 			} else {
-				RM = speed;
+				RM = base_speed + speed;
 			}
 			motors[4] = LM;
 			motors[5] = RM;
@@ -311,10 +328,12 @@ class movable implements Runnable {
 
 	/**
 	 * Used to calculate values of outer four motors.
-	 * 
+	 * If mode is 5, motors will not update.
 	 * @return
 	 */
 	private static double[] stable() {
+		if(target_depth == 0)
+			return motors;
 		if (mode == 5)
 			return motors;
 		if (stabilize) {
@@ -334,8 +353,8 @@ class movable implements Runnable {
 	 * @return
 	 */
 	private static double[] stable(double current_depth, double target_depth) {
-		int C1 = 1;
-		int d_m = (int) ((target_depth - current_depth) * C1);
+		int C1 = 10;
+		int d_m = base_speed + (int) ((target_depth - current_depth) * C1);
 		double[] motors = { d_m, d_m, d_m, d_m };
 		return motors;
 	}
@@ -352,26 +371,39 @@ class movable implements Runnable {
 	 */
 	private static double[] stable(double current_depth, double target_depth, double roll, double pitch) {
 		int K = 1; // constant multiplier for calibration
-		double FLM = 1.0, FRM = 1.0, BLM = 1.0, BRM = 1.0; // front left motor,
+		int FLM = base_speed, FRM = base_speed, BLM = base_speed, BRM = base_speed; // front left motor,
 															// etc. final value
 															// is motor speed
 		int base = 0; // base downward force to cancel out positive buoyancy
 		int C1 = 1, C2 = 1, C3 = 1;// C1, C2, C3 used for calibration
 
-		int depth_multiplier = (int) ((target_depth - current_depth) * C1);
-		int pitch_multiplier = (int) ((0 - pitch) * C2); // can replace 0 with
+		int depth_multiplier = 10 *(int) ((target_depth - current_depth) * C1);
+		int pitch_multiplier = 2*(int) ((0 - pitch) * C2); // can replace 0 with
 															// number given by
 															// IMU when level
-		int roll_multiplier = (int) ((0 - roll) * C3);
+		int roll_multiplier = 2*(int) ((0 - roll) * C3);
 
-		FLM *= (double) (K * (base + depth_multiplier + pitch_multiplier + roll_multiplier));
-		FRM *= (double) K * (base + depth_multiplier + pitch_multiplier - roll_multiplier);
-		BLM *= (double) K * (base + depth_multiplier - pitch_multiplier + roll_multiplier);
-		BRM *= (double) K * (base + depth_multiplier - pitch_multiplier - roll_multiplier);
+		FLM += (double) (K * (base + depth_multiplier + pitch_multiplier + roll_multiplier));
+		FRM += (double) K * (base + depth_multiplier + pitch_multiplier - roll_multiplier);
+		BLM += (double) K * (base + depth_multiplier - pitch_multiplier + roll_multiplier);
+		BRM += (double) K * (base + depth_multiplier - pitch_multiplier - roll_multiplier);
 
 		double[] motors = { FLM, FRM, BLM, BRM };
 		// for(int i = 0; i < 4; i++) System.out.println("mot" + motors[i]);
 		return motors;
+	}
+	
+	/**
+	 * Starts moving the sub backwards at speed [speed].
+	 * Also changes mode to 5;
+	 */
+	public static void reverse(){
+		mode = 5;
+		int R = base_speed, L = base_speed;
+		R -= speed;
+		L -= speed;
+		motors[4] = L;
+		motors[5] = R;
 	}
 
 	/**
@@ -437,6 +469,7 @@ class movable implements Runnable {
 	}
 
 	// @SuppressWarnings("unused")
+	@Deprecated
 	public static double[] move(double dir, double dist) {
 		// dir: 0= forward, negative is left, positive is right, from -180 to
 		// 180
@@ -454,7 +487,7 @@ class movable implements Runnable {
 			if (dist < 10) {
 				LM = 0;
 				RM = 0;
-				logger.info("Reached destination, turning off motors");
+				System.out.println("Reached destination, turning off motors");
 			} else {
 				LM = LM * k * (dist + dir_mult * dir);
 				RM = RM * k * (dist - dir_mult * dir);
@@ -480,8 +513,9 @@ class movable implements Runnable {
 	/**
 	 * Main method of movable; calls stable() and internal_move(); Then sets
 	 * motors to correct value using motorControle
+	 * @throws Exception 
 	 */
-	private void norm() {
+	private void norm() throws Exception {
 		int div = 0;
 		while (run) {
 			if (div == 10000)
@@ -493,22 +527,23 @@ class movable implements Runnable {
 			}
 			internal_move();
 			if (basic.debug_lvl > 10) {
-				logger.info(this.toString());
+				System.out.print(this.toString());
 			}
 			if ((basic.logger_lvl > 6 && div % 10 == 0) || (basic.logger_lvl > 9))
 				debug.log(this.toString());
-			motorControle.set_motors(motors);// TODO Get rid of motorControle?
 			try {
+				motorControle.set_motors(motors);// TODO Get rid of motorControle?
 				Thread.sleep(90);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
+				debug.log_err(e.getLocalizedMessage());
 			}
 		}
 	}
-
+//debug.log_err(e.getLocalizedMessage());
 	@Override
 	public void run() {
-		logger.info("Initilizing stabilization");
+		System.out.println("Initilizing stabilization");
 		try {
 			stable_cal();
 		} catch (InterruptedException e) {
@@ -517,9 +552,14 @@ class movable implements Runnable {
 		// self test
 		run = true;
 		init = true;
-		logger.info("Stabilization and motor function initilized");
-		norm();
-		logger.info("Shutting down sub stabilization");
+		System.out.println("Stabilization and motor function initilized");
+		try {
+			norm();
+		} catch (Exception e) {
+			e.printStackTrace();
+			debug.log_err(e.getLocalizedMessage());
+		}
+		System.out.println("Shutting down sub stabilization");
 	}
 
 	public void start() {
