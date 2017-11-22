@@ -3,7 +3,7 @@ package robosub;
 import java.io.File;
 import java.util.Scanner;
 
-import org.apache.log4j.Logger;
+//import org.apache.log4j.Logger;
 /**
  * Provides shell for user and parses config file and passed in arguments
  * @author Dakota
@@ -11,7 +11,7 @@ import org.apache.log4j.Logger;
  */
 public class parser implements Runnable {
 	Thread t;
-	private static Logger logger = Logger.getLogger(basic.class.getCanonicalName());
+	//private static Logger logger = Logger.getLogger(basic.class.getCanonicalName());
 	static boolean RUN = true;
 
 	private void star() {
@@ -43,10 +43,10 @@ public class parser implements Runnable {
 			set(args);
 		} catch (IllegalArgumentException e) {
 			if (!"End".equals(e.getMessage())) {
-				logger.error("Problem parsing command line arguments");
-				logger.trace(e);
+				System.out.println("Problem parsing command line arguments");
+				//logger.trace(e);
 			}
-			logger.info("Usage: ");
+			System.out.println("Usage: ");
 			help(0);
 			return false;
 		} catch (InterruptedException e) {
@@ -56,34 +56,35 @@ public class parser implements Runnable {
 	}
 
 	private static void help(int i) {
-		if(i ==0) logger.info("Please type help for more options");
-		logger.info("-t for max time(int)");
-		logger.info("-m for mode(int)");
-		logger.info("-ms [int] max speed");
-		logger.info("wait [int] delayed start in miliseconds");
-		logger.info("init [?]");
-		logger.info("wait [int] wait [#] miliseconds before starting");
-		logger.info("start to start prog");
-		logger.info("shut for shutdown");
+		if(i ==0) System.out.println("Please type help for more options");
+		System.out.println("-t for max time(int)");
+		System.out.println("-m for mode(int)");
+		System.out.println("-ms [int] max speed");
+		System.out.println("wait [int] delayed start in miliseconds");
+		System.out.println("init [?]");
+		System.out.println("wait [int] wait [#] miliseconds before starting");
+		System.out.println("start to start prog");
+		System.out.println("shut for shutdown");
 		if(i >= 1){
-			logger.info("stop stop lateral movement");
-			logger.info("send [string] to arduino, return answer");
-			logger.info("log [string] logs word");
-			logger.info("mot [int] starts motor at [#]");
-			logger.info("speed");
-			logger.info("-d [int] depth");
-			logger.info("off");
-			logger.info("forward");
-			logger.info("check [int]");
-			logger.info("set_dir");
-			logger.info("face");
-			logger.info("set bebug.logger level, self test, etc");
+			System.out.println("stop stop lateral movement");
+			System.out.println("send [string] to arduino, return answer");
+			System.out.println("log [string] logs word");
+			System.out.println("mot [int] starts motor at [#]");
+			System.out.println("speed");
+			System.out.println("-d [int] depth");
+			System.out.println("off");
+			System.out.println("forward");
+			System.out.println("check [int]");
+			System.out.println("set_dir");
+			System.out.println("face");
+			System.out.println("set bebug.logger level, self test, etc");
 		}
 	}
 
 	private static void set(String[] arg) throws InterruptedException {
 		int speed = 100;
 		for (int x = 0; x < arg.length; x ++) {
+			if(basic.logger_lvl > 8) debug.log("Parsing input command: "+ arg[x]);
 			switch (arg[x]) {
 			case ""://to stop it from crashing for extra spaces
 				break;
@@ -120,7 +121,7 @@ public class parser implements Runnable {
 					}else if(core.INIT){
 						basic.shutdown();
 					}else{
-						logger.info("Nothing to shut");
+						System.out.println("Nothing to shut");
 					}
 				} catch (InterruptedException e1) {
 					e1.printStackTrace();
@@ -168,11 +169,19 @@ public class parser implements Runnable {
 					System.out.println("nope");
 				}
 				break;
+			case "force_update_parseIn":
+				x++;
+				update.force_update_parseIn(arg[x]);
+				break;
 			case "name":
 				displayName();
 				break;
 			case "nope":
 				System.out.println("true");
+				break;
+			case "movableForceMode":
+				x++;
+				movable.forceMode(Integer.valueOf(arg[x]));
 				break;
 			case "-d":
 				x++;
@@ -189,6 +198,7 @@ public class parser implements Runnable {
 				break;
 			case "is_run":
 				System.out.println(core.RUN);
+				break;
 			case "f_roll_v":
 				x++;
 				update.force_roll_value(valueOf(arg[x]));
@@ -206,6 +216,10 @@ public class parser implements Runnable {
 				x++;
 				speed = valueOf(arg[x]);
 				break;
+			case "reverse":
+			case "backup":
+				movable.reverse();
+				break;
 			case "send":
 				x++;
 				System.out.println(update.ard_force(arg[x]));
@@ -218,7 +232,7 @@ public class parser implements Runnable {
 				x++;
 				debug.log_err(arg[x]);
 				break;
-			case "de__log__":
+			case "del_log_":
 				//x++;
 				debug.del__log__(true);
 				break;
@@ -240,15 +254,22 @@ public class parser implements Runnable {
 				basic.debug_lvl = valueOf(arg[x]);
 				break;
 			case "mot":
-				double[] motor_vals = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+				double[] motor_vals = { 1500, 1500, 1500, 1500, 1500, 1500 };
 				try{
 					x++;
-					motor_vals[valueOf(arg[x])] = speed;
-					System.out.println("Setting motor of " + basic.MOTOR_LAYOUT[valueOf(arg[x])] + " to " + speed);
+					motor_vals[valueOf(arg[x])] = valueOf(arg[++x]);
+					System.out.println("Setting motor of " + basic.MOTOR_LAYOUT[valueOf(arg[--x])] + " to " + arg[++x]);
 				}catch(Exception e){
 					System.out.println("Turning off mototrs");
 				}
-				motorControle.set_motors(motor_vals);
+				try {
+					motorControle.set_motors(motor_vals);
+				} catch (Exception e) {
+					System.out.println("invalid: "+e.getMessage());
+				}
+				break;
+			case "about":
+				System.out.println("Duckbot v"+basic.VERSION_NUMBER+" by CMPE Robosub Team 2017-2018");
 				break;
 			case "turn_r":
 				x++;
@@ -262,7 +283,7 @@ public class parser implements Runnable {
 				if (core.INIT) {
 					basic.start_prog();
 				} else {
-					logger.error("Can't start run mode, you have not initilized");
+					System.out.println("Can't start run mode, you have not initilized");
 				}
 				break;
 			case "help":
@@ -270,7 +291,7 @@ public class parser implements Runnable {
 				help(2);
 				break;
 			default:
-				logger.error("Invalid: " + arg[x]);
+				System.out.println("Invalid: " + arg[x]);
 				throw new IllegalArgumentException("Invalid statment");
 			}
 		}
@@ -330,7 +351,25 @@ public class parser implements Runnable {
 		}catch(Exception e){}
 	}
 	public static void pause(int x){
-		try{Thread.sleep(x);}catch(Exception e){}
+		try{Thread.sleep(x);}catch(Exception e){e.printStackTrace();}
+	}
+	public static void parseFile(File f){
+		try (Scanner in = new Scanner(f)) {
+			String line;
+			while (in.hasNextLine()) {
+				line = in.nextLine();
+				parse(line);
+			}
+		}catch(Exception e){}
+	}
+	public static void parseFile(String fileName){
+		try (Scanner in = new Scanner(new File(fileName))){
+			String line;
+			while (in.hasNextLine()) {
+				line = in.nextLine();
+				parse(line);
+			}
+		}catch(Exception e){}
 	}
 	public void run() {
 		try {
