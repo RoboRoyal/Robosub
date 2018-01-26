@@ -10,24 +10,27 @@ package robosub;
 class motorControle {//implements Runnable{
 	public static int form = 0;
 	//private static Logger logger = Logger.getLogger(motorControle.class.getCanonicalName());
-	public static int max_speed = 2200;
-	public static final int min_speed = 1300;
-	static boolean init = false;
+	public static int max_speed = 1750;//this is a very conservative max and min for the motors
+	public static final int min_speed = 1250;//too high or too low can danmage them. 
+	//however, you can adjust if you need more power
+	
+	//static boolean init = false;//old
 	static double[] motor_vals = {0.0,0.0,0.0,0.0,0.0,0.0};//FLM,FRM,BLM,BRM,LM,RM
+	static boolean[] motor_enable = {true, true, true, true, true, true};
 
 	public static void set_motors(double[] x) throws Exception{
 		for(int i = 0;i<x.length;i++){
 			if(x[i]>max_speed){
-				debug.log("Warning; invalid motor value: "+x[i]);
+				debug.log("Warning; invalid motor value: "+x[i] + " @ motor: "+i);
 				x[i] = max_speed;
 			}
 			if(x[i] < min_speed){
-				debug.log("Warning; invalid motor value: "+x[i]);
+				debug.log("Warning; invalid motor value: "+x[i]+ " @ motor: "+i);
 				x[i] = min_speed;
 			}
 		}
 		form++;
-		if(form%10==0 && basic.debug_lvl >=9){System.out.println("Motors: "); for(int i = 0;i<x.length;i++) System.out.print("Seting motor @: "+x[i]);}
+		if(form%10==0 && basic.debug_lvl >=9){System.out.println("Motors: "); for(int i = 0;i<x.length;i++) System.out.print("Seting motor @: "+x[i]);if(form>12300) form =0;}
 		if(x.length == 6){
 			//all motors
 			motor_vals = x;
@@ -51,6 +54,17 @@ class motorControle {//implements Runnable{
 				throw new Exception("Invalid motor commands givent to motorControle.set_motors: "+x);
 			}	
 		}
+		//possibly fix up this code to make it work better
+		for(int p = 0; p<6;p++){
+			if(!motor_enable[p]){
+				motor_vals[p] = 1500;//sets motor to off if its disable
+			}
+		}
 		update.set_motors(motor_vals);
 	}
+	public static void motor_enable(int mot, boolean en){
+		debug.log("Motor "+mot+" set to "+en);
+		motor_enable[mot] = en;
+	}
+	
 }
