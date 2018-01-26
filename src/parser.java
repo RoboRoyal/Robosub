@@ -1,7 +1,12 @@
 package robosub;
 
 import java.io.File;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Scanner;
+
+import com.pi4j.system.SystemInfo;
 
 //import org.apache.log4j.Logger;
 /**
@@ -11,6 +16,7 @@ import java.util.Scanner;
  */
 public class parser implements Runnable {
 	Thread t;
+	private static boolean log_parser = false;
 	//private static Logger logger = Logger.getLogger(basic.class.getCanonicalName());
 	static boolean RUN = true;
 
@@ -21,7 +27,7 @@ public class parser implements Runnable {
 			try{
 				System.out.print("> ");
 				String line = in.nextLine();
-				if(basic.logger_lvl > 0) debug.log("Parser line input: "+line);
+				if(log_parser || basic.logger_lvl > 3) debug.log("Parser line input: "+line);
 				parser.parse(line);
 			}catch(Exception e){}
 		}
@@ -82,9 +88,10 @@ public class parser implements Runnable {
 	}
 
 	private static void set(String[] arg) throws InterruptedException {
-		int speed = 100;
+		//int speed = 100;
 		for (int x = 0; x < arg.length; x ++) {
 			if(basic.logger_lvl > 8) debug.log("Parsing input command: "+ arg[x]);
+			if(arg[x].contains("#")){x=arg.length+1; break;}
 			switch (arg[x]) {
 			case ""://to stop it from crashing for extra spaces
 				break;
@@ -103,6 +110,10 @@ public class parser implements Runnable {
 					//guess you have invalid mode i don't know about. Enjoy
 				}	
 				break;
+			case "END":
+				//End of config file
+				debug.log("Successful cfg parsing");
+				break;
 			case "face":
 				x++;
 				movable.face( Integer.valueOf(arg[x]));
@@ -111,15 +122,32 @@ public class parser implements Runnable {
 				x++;
 				movable.set_dir((double) Integer.valueOf(arg[x]));
 				break;
+			case "log_start":
+				DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+				Date date = new Date();
+				debug.print("*----------------------------*");
+				debug.print("System started at: "+dateFormat.format(date));
+				debug.log("System started at: "+System.currentTimeMillis());
+				debug.log("System started by: "+System.getProperty("user.name"));
+				debug.print("*----------------------------*\n");
+				break;
+			case "log_parser":
+				x++;
+				log_parser = arg[x].equals("true");
+				break;
+			case "set_logger_lvl":
+				x++;
+				basic.logger_lvl = valueOf(arg[x]);
+				break;
 			case "pause":
 				x++;
 				pause(Integer.valueOf(arg[x]));
 				break;
 			case "shut":
 				try {
-					if(core.RUN){basic.shutdown();
+					if(core.RUN){basic.shutdown("Command line parser: 'shut'");
 					}else if(core.INIT){
-						basic.shutdown();
+						basic.shutdown("Command line parser: 'shut'");
 					}else{
 						System.out.println("Nothing to shut");
 					}
@@ -145,6 +173,9 @@ public class parser implements Runnable {
 				x++;
 				debug.error(arg[x]);
 				break;
+			case "print_tmp":
+				System.out.println(SystemInfo.getCpuTemperature());
+				break;
 			case "test":
 				core.selfTest();
 				break;
@@ -156,8 +187,12 @@ public class parser implements Runnable {
 					Thread.sleep(100);
 				}
 				break;
-			case "-ws":
 			case "wait":
+				x++;
+				try{Thread.sleep(Integer.valueOf(arg[x]));}catch(Exception e){}
+				break;
+			case "-ws":
+			case "waitStart":
 				x++;
 				core.wait_start(Integer.valueOf(arg[x]));
 				break;
@@ -179,6 +214,10 @@ public class parser implements Runnable {
 			case "nope":
 				System.out.println("true");
 				break;
+			case "no_fill_ilv":
+				x++;
+				core.set_no_fill(arg[x].equals("true"));
+				break;
 			case "movableForceMode":
 				x++;
 				movable.forceMode(Integer.valueOf(arg[x]));
@@ -196,6 +235,11 @@ public class parser implements Runnable {
 			case "movable":
 				System.out.println(movable.print());
 				break;
+			case "motor_enable":
+				x++;
+				motorControle.motor_enable(valueOf(arg[x]),arg[x+1].equals("true)"));
+				x++;
+				break;
 			case "is_run":
 				System.out.println(core.RUN);
 				break;
@@ -212,13 +256,24 @@ public class parser implements Runnable {
 				x++;
 				motorControle.max_speed = valueOf(arg[x]);
 				break;
+			case "stabilize":
+				x++;
+				movable.stabilize(arg[x].equals("true"));
+				break;
+			case "info":
+				System.out.println(core.info());
+				break;
 			case "speed":
 				x++;
-				speed = valueOf(arg[x]);
+				movable.setSpeed(valueOf(arg[x]));
 				break;
 			case "reverse":
 			case "backup":
 				movable.reverse();
+				break;
+			case "sidemove":
+				x++;
+				movable.side(valueOf(arg[x]));
 				break;
 			case "send":
 				x++;
@@ -238,7 +293,7 @@ public class parser implements Runnable {
 				break;
 			case "exit":
 				if(core.INIT){
-					basic.shutdown();
+					basic.shutdown("Command line parser: 'exit'");
 				}
 				RUN = false;
 				break;
@@ -371,6 +426,20 @@ public class parser implements Runnable {
 			}
 		}catch(Exception e){}
 	}
+	
+	public void config() {
+		String blackFile = "input/config.cfg";
+		try (Scanner in = new Scanner(new File(blackFile))) {
+			String line;
+			while (in.hasNextLine()) {
+				line = in.nextLine();
+				parse(line);
+			}
+		}catch(Exception e){
+			System.out.println("Error; problem parsing cfg file: "+e);
+		}	
+	}
+	
 	public void run() {
 		try {
 			star();
