@@ -48,6 +48,10 @@ class debug{//blinks LED and logs errors
 	    System.out.print(me);*/
 	    //System.out.println(stringWriter.toString());
 	}
+	public static void print(String str){
+		log(str);
+		System.out.println(str);
+	}
 	public static void error(String str){
 		movable.surface();
 		movable.surface();
@@ -55,17 +59,7 @@ class debug{//blinks LED and logs errors
 		blink();
 		blink();
 		System.out.print("Error: "+str);
-		try {
-	        throw new IOException("Thrown by debug manager; stack trace ");
-	    }
-	    catch (IOException e) {
-	    	StringWriter sw = new StringWriter();
-	    	PrintWriter pw = new PrintWriter(sw);
-	    	e.printStackTrace(pw);
-	    	String sStackTrace = sw.toString();
-	    	log("Stack trace: "+sStackTrace);
-	        e.printStackTrace();
-	    }
+		
 		core.abort();
 	}
 	public static void log_err(String me){
@@ -86,6 +80,9 @@ class debug{//blinks LED and logs errors
 	    }
 	}
 	public static void logWithStack(String me){
+		DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+		Date date = new Date();
+	    me += "\n - From thread: "+Thread.currentThread()+ " at time: "+dateFormat.format(date);
 		log("[Log with stack] Stack trace: "+getStackTrace()+"\n"+me);
 	}
 	public static void log(String me) {
@@ -95,7 +92,7 @@ class debug{//blinks LED and logs errors
 			temp.append(me+"\n");
 			logOut.write(temp.toString());
 		} catch (IOException e) {
-			System.out.print("Problem writing to: " + e);
+			System.out.print("Problem writing to log file(log): " + e);
 		}finally{/*Finally*/}
 	}
 	public static void del__log__(boolean sure){
@@ -105,7 +102,7 @@ class debug{//blinks LED and logs errors
 			if(sure) temp.append("\n");
 			if(sure) logOut.write(temp.toString());
 		} catch (IOException e) {
-			System.out.print("Problem writing to: " + e);
+			System.out.print("Problem writing to log file(del_log_: " + e);
 		}finally{/*Finally*/}
 	}
 	public static String getStackTrace(){
