@@ -6,6 +6,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import Sonar.util.Search;
+
 //import org.apache.log4j.BasicConfigurator;
 
 /**
@@ -28,8 +30,8 @@ public class basic {
 	private static boolean run = true;
 	private static core me;//this is to keep track of the thread so we can stop it for shutdown
 	public static final String[] MOTOR_LAYOUT = {"FL","FR","BL","BR","L","R"};
-	public static final String VERSION_NUMBER = "1.1.2";//works with pi
-	public static int debug_lvl = 0;
+	public static final String VERSION_NUMBER = "1.2.8";//general update/improvements from 1.2.1
+	public static int debug_lvl = 0; 
 	public static int logger_lvl = 5;
 	//private static Logger logger = Logger.getLogger(basic.class.getCanonicalName());
 
@@ -47,7 +49,7 @@ public class basic {
 
 	}
 
-	private static void master(String[] args) {
+	private static void master(String[] args) { 
 		DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 		Date date = new Date();
 		debug.log("\n*----------------------------*");
@@ -58,10 +60,12 @@ public class basic {
 			parser.parse(args);
 		}
 		parser me2 = new parser();
+		me2.config();
 		try{
 			me2.start();
 			if(core.running || core.RUN || core.INIT){
 				System.out.print("Parser ended while system still running");
+				//You can comment this out if you need to, but generally it means you messed up your config file
 				throw new Exception("Parser ended while system still running");
 			}
 		}catch(Exception e){
@@ -72,11 +76,11 @@ public class basic {
 		
 	}
 
-	public static void shutdown() throws InterruptedException {
-		core.shutdown();
+	public static void shutdown(String why) throws InterruptedException {
+		core.shutdown(why);
 		run = false;
 		try {
-			Thread.sleep(50);//allow time for thread to end correctly
+			Thread.sleep(150);//allow time for thread to end correctly
 			if(core.t!=null) core.t.stop();//may be not needed-but ensure it ends
 			core.reset();
 		} catch (NullPointerException e) {
