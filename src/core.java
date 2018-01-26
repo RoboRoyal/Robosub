@@ -1,6 +1,7 @@
 package robosub;
 
 import java.util.Scanner;
+import com.pi4j.system.SystemInfo;
 
 //import org.apache.log4j.BasicConfigurator;
 //import org.apache.log4j.Logger;
@@ -9,7 +10,7 @@ import java.util.Scanner;
  * Core class handles heart of program and many helper functions. Main function
  * is run_mode that branches off control to subroutine
  * 
- * @author Dakota
+ * @author Dakota A.
  *
  */
 @SuppressWarnings("unused")
@@ -22,7 +23,7 @@ public class core implements Runnable {
 	private static int OVER = 4;
 	public static int mode = 10;
 	public static boolean INIT = false;
-	static boolean PI = false;
+	private static boolean PI = false;
 	private static long MAX_TIME = 20000;// mili
 
 	static void wait_start(Integer integer) {
@@ -37,25 +38,28 @@ public class core implements Runnable {
 		System.out.println("Wait over, starting");
 		basic.start_prog();
 	}
+	
+	static void shutdown(String why) throws InterruptedException {
 
-	static void shutdown() throws InterruptedException {
+	//static void shutdown() throws InterruptedException {
 		if (basic.debug_lvl > 0)
-			debug.logWithStack("System receaved shutdown command, shutting down");
+			debug.logWithStack("System receaved shutdown command becuase: "+why);
 		System.out.println("Ending...");
 		RUN = false;
 		running = false;
 		INIT = false;
-		Thread.sleep(1000);
-		movable.stop();
+		Thread.sleep(100);//chiil for a sec
+		movable.stop();//stop and surface sub
 		movable.surface();
-		movable.stop_thread();
+		Thread.sleep(400);//give time for command to go through
+		movable.stop_thread();//stop movable
 		Thread.sleep(400);
-		sonar.stop();
+		sonar.stop();//stop sonar
 		// /motorControle.stop();
 		Thread.sleep(200);
-		update.stop();
+		update.stop();//give update time to give message then stop it
 		Thread.sleep(400);
-		//t = null;
+		//t = null; //may want to uncomment; helps reset thread when it works
 	}
 
 	/**
@@ -122,6 +126,9 @@ public class core implements Runnable {
 				debug.log("Step: " + step);
 			}
 			status = status();
+			if(!status && step %10 == 0 && mode < 10){//if we arent checking for code, still nice to know if it fails
+				debug.log("Status failed");
+			}
 		}
 		running = false;//need
 		if (!status) {
@@ -130,7 +137,7 @@ public class core implements Runnable {
 			abort();
 		} else if (System.currentTimeMillis() >= end_time) {
 			System.out.println("Time expired");
-			debug.log_err("Time expired");
+			debug.log("Time expired");
 			abort();
 		} else if (goal) {
 			System.out.println("Succsess! Ending running");
@@ -140,7 +147,7 @@ public class core implements Runnable {
 				debug.log("Shutting down; shut on finish");
 				movable.stop();
 				movable.surface();
-				basic.shutdown();
+				basic.shutdown("Sub reached goal");
 			}else{
 				running = false;//redudency lol
 			}
@@ -181,11 +188,16 @@ public class core implements Runnable {
 
 	public static void abort() {
 		System.out.println("Aborting!");
-		debug.log("Aborting!");
+		debug.log_err("Aborting!");
 		movable.abort();
 		try {
 			movable.abort();
-			basic.shutdown();
+			String why ="Sub aborted";
+			if(!status()){
+				System.out.println("Status failed");
+				 why += ": statsu failed";
+			}
+			basic.shutdown(why);
 		} catch (InterruptedException e) {
 			System.out.println("Error 76");
 			e.printStackTrace();
@@ -296,7 +308,17 @@ public class core implements Runnable {
 			debug.log_err("Bad stable: pitch: " + update.IMU_pitch() + " roll: " + update.IMU_roll());
 			return false;
 		}
-		// check anything else, tmp, battery level etc.
+		//TODO check anything else, tmp, battery level etc.
+		if(SystemInfo.getCpuTemperature() > 90){
+			System.out.println("Things are getting hot!");
+			debug.log("CPU temp hot: "+SystemInfo.getCpuTemperature());
+		}
+		if(SystemInfo.getCpuTemperature() > 98){
+			System.out.println("Way too hot");
+			debug.log("CPU temp too hott: "+SystemInfo.getCpuTemperature());
+			parser.parse("exit");
+			return false; //this can be removed if you don't care about this little CPU that tryed
+		}
 		return true;
 	}
 
@@ -312,38 +334,57 @@ public class core implements Runnable {
 		return (sonar.get_pinger_dist() < 10);
 	}
 
+	//I knbow this is a bit ugly but it works well enough
 	static void init() throws InterruptedException {
-		if (!check(4)) {
-			return;
+		try{
+			if (!check(4)) {
+				return; //invalid to run
+			}
+			if (basic.logger_lvl > 0)
+				debug.log("----Initiating system----");
+			System.out.println("----Initiating system----");
+			Thread.sleep(300);// wait
+			update m4 = new update();
+			
+			//TODO
+			//CHANGE THIS LINE, PLEASE, CHANGE IT
+			//FIX THIS LINE FOR THE LOVE OF GOD
+			//IT WONT WORK LIKE THIS
+			update.setUp(false); //THIS SHOULD BE PI, NOT FALSE
+			//CHANGE THIS LINE TO: update.setUp(PI);
+			
+			m4.start();
+			if (update.self_test()) {
+				System.out.println("Successful connection!");
+			} else {
+				System.out.println("Unable to establish connection");
+			}
+			Thread.sleep(100);
+			// set up IO
+			sonar me = new sonar();
+			me.start();
+			Thread.sleep(300);
+			// motorControle me2 = new motorControle();
+			// me2.start();
+			Thread.sleep(300);
+			movable me3 = new movable();
+			me3.start();
+			while(!movable.initiated()){
+				Thread.sleep(50);
+			}
+			Thread.sleep(200);
+			INIT = true;
+			if(true){
+				System.out.println("----System sucsessfully initiated----");
+				if (basic.logger_lvl > 0)
+					debug.log("Init sucsess");
+			}else{
+				System.out.println("Unkown problem occured");
+			}
+		}catch(Exception elo){
+			debug.print("Error occured: "+elo);
+			debug.log_err(elo.getMessage());
 		}
-		if (basic.logger_lvl > 0)
-			debug.log("----Initiating system----");
-		System.out.println("----Initiating system----");
-		Thread.sleep(300);// wait
-		update m4 = new update();
-		update.setUp(false);
-		m4.start();
-		if (update.self_test()) {
-			System.out.println("Successful connection!");
-		} else {
-			System.out.println("Unable to establish connection");
-		}
-		Thread.sleep(100);
-		// set up IO
-		sonar me = new sonar();
-		me.start();
-		Thread.sleep(300);
-		// motorControle me2 = new motorControle();
-		// me2.start();
-		Thread.sleep(300);
-		movable me3 = new movable();
-		me3.start();
-		Thread.sleep(600);
-		INIT = true;
-		System.out.println("----System sucsessfully initiated----");
-		if (basic.logger_lvl > 0)
-			debug.log("Init sucsess");
-
 	}
 
 	public static boolean check(int over) throws InterruptedException {
@@ -354,14 +395,15 @@ public class core implements Runnable {
 			return false;
 		}
 		if (System.getProperty("sun.arch.data.model").toLowerCase().contains("64")) {
-			// System.out.println("64bit CPU detected");
+			System.out.println("64bit CPU detected");
 		} else {
 			System.out.println("32 bit CPU detected");
 		}
 		boolean good = false;
 		if (System.getProperty("os.name").toLowerCase().contains("win")) {
 			System.out.println("Your OS, WINDOWS, is not full supported! Motor controle disabled");
-			// System.out.println("Windows");
+			//System.out.println("Windows");
+			System.out.println(System.getProperty("os.arch"));
 			good = false;
 			PI = false;
 		} else if (System.getProperty("os.name").toLowerCase().contains("mac")) {
@@ -369,9 +411,12 @@ public class core implements Runnable {
 			// System.out.println("Mac");
 			good = false;
 			PI = false;
-		} else if (System.getProperty("os.name").toLowerCase().contains("ras")) {
-			good = true;
-			PI = true;
+		} else if (System.getProperty("os.name").toLowerCase().contains("linux")) {
+			System.out.println("Linux");
+			if(System.getProperty("os.arch").toLowerCase().contains("arm")){
+				good = true;
+				PI = true;
+			}
 		} else {
 			System.out.println("Not sure if OS is supported, but ill try it");
 			good = true;
@@ -407,13 +452,17 @@ public class core implements Runnable {
 			System.out.println("Im doing it");
 			OVER = 9;
 			System.runFinalizersOnExit(true);
-			System.setSecurityManager(System.getSecurityManager());
+			if(System.getSecurityManager() == null){
+				SecurityManager me = new SecurityManager();
+				System.setSecurityManager(me);
+				System.out.println("new secM @: "+me);
+			}
 			if (System.console() == null) {
 				System.out.println("No con; GC");
 				System.gc();
 			}
 			try {
-				System.setProperty("no_fill", "true");
+				System.setProperty("no_fill", "true");//this is not a good thing to do
 			} catch (Exception e) {
 				System.out.println("I told you this was bad");
 				abort();
@@ -464,6 +513,7 @@ public class core implements Runnable {
 			System.out.println("***Bad connection***");
 			allGood = false;
 		}
+		//TODO check battery status and temp
 		System.out.println("*** Testing motors. Each motor should turn on, one at a time, for two seconds**");
 		System.out.println("***If a motor does not turn on, there is a problem***");
 		movable.motorTest();
@@ -524,7 +574,7 @@ public class core implements Runnable {
 		}
 		System.out.println("Running status test");
 		Thread.sleep(500);
-		if (status()) {
+		if (status()) { //it runs this twice on purpose
 			System.out.println("Passed status test");
 		} else {
 			System.out.println("Failed status check");
@@ -541,7 +591,9 @@ public class core implements Runnable {
 	}
 
 	public static boolean run_motors() {
-		return (System.getProperty("os.name").contains("ras"));
+		return (System.getProperty("os.name").contains("ras"));//this is out of date, i mean wrong
+		//turns out raspian is identified as just Linux from JVM
+		
 	}
 
 	@Override
@@ -576,5 +628,26 @@ public class core implements Runnable {
 		if (t != null) {
 			System.out.println("Didnt work");
 		}
+	}
+	public static String telemitry(){
+		String all_info = "\nTelemitry; \n\tYaw(direction): "+update.IMU_yaw()+"\n\tPitch: ";
+		all_info += update.IMU_pitch()+"\n\tRoll: "+update.IMU_roll();
+		all_info += "\n\tDepth: "+update.get_depth();
+		
+		return all_info;
+	}
+
+	public static String info() {
+		String all_info = "System temp: "+SystemInfo.getCpuTemperature();
+		all_info += "\nSystem Status: "+status();
+		all_info += "\nInit, Run & Connected: "+INIT+", "+RUN + ", "+update.self_test();
+		all_info += "\nMode: " + mode + " Stabalized: "+movable.isStabilize();
+		all_info += "\nMotor Values: "+movable.print_motor_values();
+		all_info += "\nTelemitry; \n\tYaw(direction): "+update.IMU_yaw()+"; "+movable.getTarget_direction();
+		all_info += "\n\tPitch: "+update.IMU_pitch();
+		all_info += "\n\tRoll: "+update.IMU_roll();
+		all_info += "\n\tDepth: "+update.get_depth()+"; "+movable.getTarget_depth();
+		
+		return all_info;
 	}
 }
