@@ -58,6 +58,10 @@ class update implements Runnable{//interface with sensors
     public static double IMU_pitch(){
         return IMU_pitch;
     }
+    public static double IMU_yaw(){
+    	IMU_YAW = direction;
+        return IMU_YAW;
+    }
     
     @Override
     public void run(){
@@ -125,11 +129,12 @@ class update implements Runnable{//interface with sensors
         try {
             serial.open(port, br);
         } catch (IOException ioe) {
-        	System.out.println("Error");
+        	System.out.println("Error with opening port");
             throw new RuntimeException(ioe);
         
     }catch(Exception e){
     	System.out.println("Error is: "+e.getMessage());
+    	debug.log("Error opening port in update.setUp: "+e);
     }
         System.out.println("Port is opened.");
     }
@@ -173,13 +178,13 @@ class update implements Runnable{//interface with sensors
         ready = true;
     }
     public static boolean self_test(){
-    	if(core.no_fill() || !IS_PI){
-    		return true;
+    	if(core.no_fill() || !IS_PI){//if no fill or not an actual PI,
+    		return true;//there is no point in actually running the test
     	}
     	//return true;
         ready = false;
         String newString = "[t";
-        int test_num = (int) (Math.random()*122);
+        int test_num = (int) (Math.random()*121);//11^2
         newString += test_num;
         newString += ",";
         set(newString);
