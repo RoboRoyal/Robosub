@@ -13,19 +13,39 @@ class movable implements Runnable {
 	Thread t;
 	static boolean run = false;// Initialize to false, must be set to true
 								// before running
-	static boolean init = false;
+	static boolean init = false;//keeps track of if movable has been initialized 
 	static boolean stabilize = true;// Whether or not to actively stabilize the
 									// sub
 	//private static Logger logger = Logger.getLogger(movable.class.getCanonicalName());
 	private static double target_depth = 5;// in [no unit]
 	private static double target_direction = 0;// in degrees
-	public static int speed = 150;// not max speed, just normal seed
+	private static double sideMove = 0;//for movements laterally:side to side
+	private static int speed = 100;// not max speed, just normal seed
 	private static final int base_speed = 1500;
 	public static int mode = 0;// mode 0=don't move, 1=turn, 2=move and turn, 3
 								// = move forward with no turning, 5= no update
+								//6=side movement, no stabilization, experimental 
 	private static double[] motors = { base_speed, base_speed, base_speed, base_speed, base_speed, base_speed };// see basic for motor
-															// names
-
+														// names
+	private static double cal_pitch;//calabrated level pitch
+	private static double cal_roll;//calebrated stable roll
+	private static double target_pitch = 0.0;//target pitch
+	private static double target_roll = 0.0;//target roll angle
+	private static boolean use_IMU_cal = true;
+	
+	public static boolean isStabilize() {
+		return stabilize;
+	}
+	public static double getTarget_depth() {
+		return target_depth;
+	}
+	public static double getTarget_direction() {
+		return target_direction;
+	}
+	
+	public static void setuse_IMU_cal(){//TODO
+		
+	}
 	/**
 	 * Stops movment of sub
 	 */
@@ -51,6 +71,36 @@ class movable implements Runnable {
 		motors[2] = base_speed;
 		motors[3] = base_speed;
 		target_depth = 0;
+	}
+	
+	/**
+	 * Used to move sub right and left laterally. 
+	 * Changes mode to 6.
+	 * Positive = right, negative = left.
+	 * This will not stop movement until mov is set to 0 or mode is changed.
+	 * @param mov How fast to move laterally. Positive moves sub right, negative numbers move it left.
+	 */
+	public static void side(int mov){
+		mode = 6;
+		sideMove = mov;
+	}
+	
+	/**
+	 * Internal method to adjust stable motor position to move sub laterally left and right. 
+	 * @param tmp Stable motor position
+	 * @return New motor position
+	 */
+	private double[] side_move(double[] tmp) {
+		//0,2=left;1,3=right
+		
+		//brute force way:
+		tmp[0] = tmp[0] + sideMove;
+		tmp[2] = tmp[2] + sideMove;
+		tmp[1] = tmp[1] - sideMove;
+		tmp[3] = tmp[3] - sideMove;
+		
+		//better way to do it is to adjust target tilt angle 
+		return tmp;
 	}
 
 	/**
@@ -121,8 +171,11 @@ class movable implements Runnable {
 	 * 
 	 * @param sp
 	 */
-	public static void setSpeed(int sp) {
-		speed = sp;
+	public static void setSpeed(int new_speed) {
+		if(new_speed < 0 || new_speed >= 200){
+			debug.print("invalid speed set: "+new_speed);
+		}
+		speed = new_speed;
 	}
 
 	/**
@@ -143,6 +196,14 @@ class movable implements Runnable {
 		return re;
 	}
 
+	public static String print_motor_values() {
+		String re = "Movable; Motors: ";
+		for (double i : motors) {
+			re += i + ", ";
+		}
+		return re;
+	}
+	
 	public String toString() {// self print
 		return print();
 	}
@@ -211,6 +272,7 @@ class movable implements Runnable {
 
 	/**
 	 * Used to calculate value of left and right motor
+	 * Uses values from update.directio (current facing direction) and target_direction and mode
 	 */
 	private static void internal_move() {
 		double LM = base_speed, RM = base_speed;
@@ -378,10 +440,10 @@ class movable implements Runnable {
 		int C1 = 1, C2 = 1, C3 = 1;// C1, C2, C3 used for calibration
 
 		int depth_multiplier = 10 *(int) ((target_depth - current_depth) * C1);
-		int pitch_multiplier = 2*(int) ((0 - pitch) * C2); // can replace 0 with
+		int pitch_multiplier = 2*(int) (((cal_pitch - target_pitch) - pitch) * C2); // can replace 0 with
 															// number given by
-															// IMU when level
-		int roll_multiplier = 2*(int) ((0 - roll) * C3);
+															// IMU when level---DONE
+		int roll_multiplier = 2*(int) (((cal_roll - target_roll) - roll) * C3);
 
 		FLM += (double) (K * (base + depth_multiplier + pitch_multiplier + roll_multiplier));
 		FRM += (double) K * (base + depth_multiplier + pitch_multiplier - roll_multiplier);
@@ -497,14 +559,22 @@ class movable implements Runnable {
 		return motors;
 	}
 
-	@SuppressWarnings("unused")
-	private static void stable_cal() throws InterruptedException {
+	//@SuppressWarnings("unused")-gives warning that 'unused' is unused. Ironic.
+	private static void stable_cal() throws Exception {
 		double roll_cal_total = 0;
 		double pitch_cal_total = 0;
 		for (int x = 0; x < 50; x++) {
 			pitch_cal_total += update.IMU_pitch();
 			roll_cal_total += update.IMU_roll();
-			Thread.sleep(5);
+			Thread.sleep(101);
+		}
+		cal_roll = roll_cal_total/50;
+		cal_pitch = pitch_cal_total/50;
+		debug.log("Calabrated roll: "+cal_roll+" pitch: "+cal_pitch);
+		if(cal_roll > 10 || cal_pitch > 10){
+			System.out.print("Invalid roll/pitch values");
+			System.out.print("Calabrated roll: "+cal_roll+" pitch: "+cal_pitch);
+			throw new Exception("Invalid calabration position. Reset sub position and reinitiate");
 		}
 		// double roll_cal = roll_cal_total/100;//calibration for IMU
 		// double pitch_cal = pitch_cal_total/100;
@@ -522,6 +592,20 @@ class movable implements Runnable {
 				div = -1;
 			div++;
 			double[] tmp = stable();
+			if(mode == 6){
+				tmp = side_move(tmp);
+			}else{
+				if(use_IMU_cal){
+					//target_roll = cal_roll;
+					//target_pitch = cal_pitch;
+
+				}else{
+					//target_roll = 0;
+					//target_pitch = 0;
+					cal_roll = 0;
+					cal_pitch = 0;
+				}
+			}
 			for (int i = 0; i < 4; i++) {
 				motors[i] = tmp[i];
 			}
@@ -529,7 +613,7 @@ class movable implements Runnable {
 			if (basic.debug_lvl > 10) {
 				System.out.print(this.toString());
 			}
-			if ((basic.logger_lvl > 6 && div % 10 == 0) || (basic.logger_lvl > 9))
+			if ((basic.logger_lvl > 6 && div % 10 == 0) || (basic.logger_lvl >= 9))
 				debug.log(this.toString());
 			try {
 				motorControle.set_motors(motors);// TODO Get rid of motorControle?
@@ -540,13 +624,14 @@ class movable implements Runnable {
 			}
 		}
 	}
+
 //debug.log_err(e.getLocalizedMessage());
 	@Override
-	public void run() {
+	public void run(){
 		System.out.println("Initilizing stabilization");
 		try {
 			stable_cal();
-		} catch (InterruptedException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		// self test
@@ -561,7 +646,7 @@ class movable implements Runnable {
 		}
 		System.out.println("Shutting down sub stabilization");
 	}
-
+	public static boolean initiated(){return(run && init);}
 	public void start() {
 		if (t == null) {
 			t = new Thread(this, "movable");
