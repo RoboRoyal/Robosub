@@ -32,7 +32,7 @@ class movable implements Runnable {
 	private static double target_pitch = 0.0;//target pitch
 	private static double target_roll = 0.0;//target roll angle
 	private static boolean use_IMU_cal = true;
-	
+	public static int getbase_speed(){return base_speed;}
 	public static boolean isStabilize() {
 		return stabilize;
 	}
@@ -42,9 +42,17 @@ class movable implements Runnable {
 	public static double getTarget_direction() {
 		return target_direction;
 	}
-	
-	public static void setuse_IMU_cal(){//TODO
-		
+	public static double getcal_pitch(){
+		return cal_pitch;
+	}
+	public static double getcal_roll(){
+		return cal_roll;
+	}
+	 
+	public static void setuse_IMU_cal(){
+		use_IMU_cal = false;
+		cal_pitch = 0;
+		cal_roll = 0;
 	}
 	/**
 	 * Stops movment of sub
@@ -595,7 +603,8 @@ class movable implements Runnable {
 			if(mode == 6){
 				tmp = side_move(tmp);
 			}else{
-				if(use_IMU_cal){
+				if(use_IMU_cal){//cal_pitch and roll should already be set
+					//do nothing
 					//target_roll = cal_roll;
 					//target_pitch = cal_pitch;
 
@@ -616,7 +625,7 @@ class movable implements Runnable {
 			if ((basic.logger_lvl > 6 && div % 10 == 0) || (basic.logger_lvl >= 9))
 				debug.log(this.toString());
 			try {
-				motorControle.set_motors(motors);// TODO Get rid of motorControle?
+				motorControle.set_motors(motors);
 				Thread.sleep(90);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
