@@ -1,6 +1,6 @@
 package robosub;
 
-import org.apache.log4j.Logger;
+//import org.apache.log4j.Logger;
 
 /**
  * All things sonar, one I figure that out
@@ -9,7 +9,7 @@ import org.apache.log4j.Logger;
  *
  */
 class sonar implements Runnable {
-	private static Logger logger = Logger.getLogger(sonar.class.getCanonicalName());
+	//private static Logger logger = Logger.getLogger(sonar.class.getCanonicalName());
 	Thread t;
 	static int target_freq = 35000;
 	static int pinger_depth = 10;
@@ -101,17 +101,17 @@ class sonar implements Runnable {
 
 	@Override
 	public void run() {
-		logger.info("Initilizing sonar");
+		System.out.println("Initilizing sonar");
 		// run set up to initiate sonar
 		// self test
 		if (sonar_init() && sonar_self_test()) {
 			run = true;
 			init = true;
-			logger.info("Sonar initilizing compleate");
+			System.out.println("Sonar initilizing compleate; NOT IMPLIMENTED!");
 			sonar_run();
-			logger.info("Shutting down sonar");
+			System.out.println("Shutting down sonar");
 		} else {
-			logger.error("Problem initiating sonar");
+			System.out.println("Problem initiating or running sonar");
 		}
 
 	}
@@ -129,6 +129,18 @@ class sonar implements Runnable {
 		return true;
 	}
 
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	private boolean sonar_init() {
 		// TODO Auto-generated method stub
 		return true;
