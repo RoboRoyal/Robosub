@@ -174,7 +174,13 @@ public class parser implements Runnable {
 				debug.error(arg[x]);
 				break;
 			case "print_tmp":
-				System.out.println(SystemInfo.getCpuTemperature());
+				float temp = -100;
+				try{
+					temp = SystemInfo.getCpuTemperature();
+				}catch(Exception e){
+					System.out.println("Couldn't get temp: " + e.getLocalizedMessage());
+				}
+				System.out.println(temp);
 				break;
 			case "test":
 				core.selfTest();
