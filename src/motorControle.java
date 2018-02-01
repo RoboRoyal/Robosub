@@ -13,6 +13,8 @@ class motorControle {//implements Runnable{
 	public static int max_speed = 1750;//this is a very conservative max and min for the motors
 	public static final int min_speed = 1250;//too high or too low can danmage them. 
 	//however, you can adjust if you need more power
+	//Actual max and min values of current motor servo controlers are 1100-1900
+	//TODO Changes might also need to be made in Arduino code 
 	
 	//static boolean init = false;//old
 	static double[] motor_vals = {0.0,0.0,0.0,0.0,0.0,0.0};//FLM,FRM,BLM,BRM,LM,RM
