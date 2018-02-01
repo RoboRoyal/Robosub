@@ -1,5 +1,6 @@
 package robosub;
 
+import java.io.IOException;
 import java.util.Scanner;
 import com.pi4j.system.SystemInfo;
 
@@ -25,6 +26,7 @@ public class core implements Runnable {
 	public static boolean INIT = false;
 	private static boolean PI = false;
 	private static long MAX_TIME = 20000;// mili
+	private static short error = 0;
 
 	static void wait_start(Integer integer) {
 		System.out.println();
@@ -289,8 +291,20 @@ public class core implements Runnable {
 		}
 		return false;
 	}
+	public static boolean status(){//this checks to see if there is a problem
+		if(status2()){//different from status2() as there needs 3 consecutive error for there to be an abort
+			error++;//this means one false reading wont abort the whole system
+		}else if(error>0){
+			error--;
+		}
+		if(error > 2){//three status fails needed to cuase total fail
+			return false;
+		}else{
+			return true;
+		}
+	}
 
-	private static boolean status() {// check to make sure everything is OK
+	private static boolean status2() {// check to make sure everything is OK
 		if (update.getWaterSensor() > .5) {
 			System.out.println("Takeing on water; level at: " + update.getWaterSensor());
 			/*if (basic.logger_lvl > 0)
@@ -309,20 +323,24 @@ public class core implements Runnable {
 			return false;
 		}
 		//TODO check anything else, tmp, battery level etc.
-		if(SystemInfo.getCpuTemperature() > 90){
-			System.out.println("Things are getting hot!");
-			debug.log("CPU temp hot: "+SystemInfo.getCpuTemperature());
-		}
-		if(SystemInfo.getCpuTemperature() > 98){
-			System.out.println("Way too hot");
-			debug.log("CPU temp too hott: "+SystemInfo.getCpuTemperature());
-			parser.parse("exit");
-			return false; //this can be removed if you don't care about this little CPU that tryed
+		try{
+			if(SystemInfo.getCpuTemperature() > 90){
+				System.out.println("Things are getting hot!");
+				debug.log("CPU temp hot: "+SystemInfo.getCpuTemperature());
+			}
+			if(SystemInfo.getCpuTemperature() > 98){
+				System.out.println("Way too hot");
+				debug.log("CPU temp too hott: "+SystemInfo.getCpuTemperature());
+				parser.parse("exit");
+				return false; //this can be removed if you don't care about this little CPU that tryed
+			}
+		}catch(IOException e){
+			System.out.println("Couldnt get temp: "+e.getMessage());
 		}
 		return true;
 	}
-
-	private static boolean sonar_nav() throws InterruptedException {
+ 
+	private static boolean sonar_nav() throws InterruptedException { 
 		int[] pair1 = { 1, 2 };// freq of two beacons
 		sonar.set_target_freq(pair1[0]);
 		movable.move(sonar.get_pinger_dir(), sonar.get_pinger_dist());
@@ -638,14 +656,23 @@ public class core implements Runnable {
 	}
 
 	public static String info() {
-		String all_info = "System temp: "+SystemInfo.getCpuTemperature();
+		int temp = -100;
+		try{
+			temp = SystemInfo.getCpuTemperature();
+		}catch(Exception e){
+			System.out.println("Couldn't get temp: " + e.getLocalizedMessage());
+		}
+		String name = null;
+		try{name = basic.mode_names[mode];}catch(Exception e){name = "No name";}
+		String all_info = "System temp: "+temp;
 		all_info += "\nSystem Status: "+status();
 		all_info += "\nInit, Run & Connected: "+INIT+", "+RUN + ", "+update.self_test();
-		all_info += "\nMode: " + mode + " Stabalized: "+movable.isStabilize();
+		all_info += "\nMode: " + mode + ", "+name+",";
+		all_info += " Stabalized: "+movable.isStabilize();
 		all_info += "\nMotor Values: "+movable.print_motor_values();
 		all_info += "\nTelemitry; \n\tYaw(direction): "+update.IMU_yaw()+"; "+movable.getTarget_direction();
-		all_info += "\n\tPitch: "+update.IMU_pitch();
-		all_info += "\n\tRoll: "+update.IMU_roll();
+		all_info += "\n\tPitch: "+update.IMU_pitch()+", "+movable.getcal_pitch();
+		all_info += "\n\tRoll: "+update.IMU_roll()+", "+movable.getcal_roll();
 		all_info += "\n\tDepth: "+update.get_depth()+"; "+movable.getTarget_depth();
 		
 		return all_info;
