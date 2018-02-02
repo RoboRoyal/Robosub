@@ -32,6 +32,7 @@ class movable implements Runnable {
 	private static double target_pitch = 0.0;//target pitch
 	private static double target_roll = 0.0;//target roll angle
 	private static boolean use_IMU_cal = true;
+	public static boolean quick = false;
 	public static int getbase_speed(){return base_speed;}
 	public static boolean isStabilize() {
 		return stabilize;
@@ -571,21 +572,23 @@ class movable implements Runnable {
 	private static void stable_cal() throws Exception {
 		double roll_cal_total = 0;
 		double pitch_cal_total = 0;
-		for (int x = 0; x < 50; x++) {
-			pitch_cal_total += update.IMU_pitch();
-			roll_cal_total += update.IMU_roll();
-			Thread.sleep(101);
+		if(!quick){
+			for (int x = 0; x < 50; x++) {
+				pitch_cal_total += update.IMU_pitch();
+				roll_cal_total += update.IMU_roll();
+				Thread.sleep(101);
+			}
+			cal_roll = roll_cal_total/50;
+			cal_pitch = pitch_cal_total/50;
+			debug.log("Calabrated roll: "+cal_roll+" pitch: "+cal_pitch);
+			if(cal_roll > 10 || cal_pitch > 10){
+				System.out.print("Invalid roll/pitch values");
+				System.out.print("Calabrated roll: "+cal_roll+" pitch: "+cal_pitch);
+				throw new Exception("Invalid calabration position. Reset sub position and reinitiate");
+			}
+			// double roll_cal = roll_cal_total/100;//calibration for IMU
+			// double pitch_cal = pitch_cal_total/100;
 		}
-		cal_roll = roll_cal_total/50;
-		cal_pitch = pitch_cal_total/50;
-		debug.log("Calabrated roll: "+cal_roll+" pitch: "+cal_pitch);
-		if(cal_roll > 10 || cal_pitch > 10){
-			System.out.print("Invalid roll/pitch values");
-			System.out.print("Calabrated roll: "+cal_roll+" pitch: "+cal_pitch);
-			throw new Exception("Invalid calabration position. Reset sub position and reinitiate");
-		}
-		// double roll_cal = roll_cal_total/100;//calibration for IMU
-		// double pitch_cal = pitch_cal_total/100;
 	}
 
 	/**
