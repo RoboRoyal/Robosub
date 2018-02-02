@@ -261,18 +261,18 @@ class update implements Runnable{//interface with sensors
     	//motorControle.set_motors(motor_stop);
     	if(!serial.isOpen()){
     		System.out.println("Port not open, cant close");
-    		return;
-    	}
-    	try{
-    		//TODO change to base value of motors 
-        	set("[n1500,1500,1500,1500,1500,1500");//turns off all motors
-    		Thread.sleep(120);
-    		set("[s1,");//send shut down
-    		//TODO send shut command
-    		Thread.sleep(120);//wait for signal to go through
-    		if(useReal) serial.close();//close port
-    	}catch(Exception e){
-    		debug.error(e.getMessage());
+    	}else{
+    		try{
+        		//TODO change to base value of motors 
+            	set("[n1500,1500,1500,1500,1500,1500");//turns off all motors
+        		Thread.sleep(120);
+        		set("[s1,");//send shut down
+        		//TODO send shut command
+        		Thread.sleep(120);//wait for signal to go through
+        		if(useReal) serial.close();//close port
+        	}catch(Exception e){
+        		debug.error(e.getMessage());
+        	}
     	}
     	if(run){
         	run = false;
