@@ -143,6 +143,10 @@ class update implements Runnable{//interface with sensors
             });
         }
         System.out.println("Opening port [" + port + ":" + Integer.toString(br) + "]");
+        if(logTraffic){
+        	del();
+        	log("Opening port [" + port + ":" + Integer.toString(br) + "]");
+        }
         try {
             serial.open(port, br);//actually opens port
             ready = true;//ready for output
@@ -281,7 +285,7 @@ class update implements Runnable{//interface with sensors
     	if(basic.logger_lvl > 10) debug.log("Setting update.output @ : "+System.currentTimeMillis()+" : "+newOutputString);
     	output = newOutputString;
     }
-    public static void log(String me) {
+    public static void log(String me) {//TODO make one writer and close it at the end
 		packetNum++;
 		if(me.equals(last)){
 			return;
@@ -297,7 +301,16 @@ class update implements Runnable{//interface with sensors
 			System.out.print("Problem writing to: " + e);
 		}finally{/*Finally*/}
 	}
-    
+    public static void del() {
+		String logFile = "output/SerialOutFile.txt";
+		StringBuilder temp = new StringBuilder();
+		try (Writer logOut = new BufferedWriter(new FileWriter(new File(logFile)))) {
+			temp.append("\n");
+			logOut.write(temp.toString());
+		} catch (IOException e) {
+			System.out.print("Problem writing to: " + e);
+		}finally{/*Finally*/}
+	}
     
     public void start() {
         if (t == null) {
