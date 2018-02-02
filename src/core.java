@@ -352,11 +352,13 @@ public class core implements Runnable {
 		return (sonar.get_pinger_dist() < 10);
 	}
 
-	static void init() throws InterruptedException {
-		init(false);
+	static void init(boolean quick) throws InterruptedException {
+		movable.quick = quick;
+		init();
+		movable.quick = false;
 	}
 	//I knbow this is a bit ugly but it works well enough
-	static void init(boolean quick) throws InterruptedException {
+	static void init() throws InterruptedException {
 		try{
 			if (!check(4)) {
 				return; //invalid to run
@@ -366,14 +368,8 @@ public class core implements Runnable {
 			System.out.println("----Initiating system----");
 			Thread.sleep(300);// wait
 			update m4 = new update();
-			
-			//TODO
-			//CHANGE THIS LINE, PLEASE, CHANGE IT
-			//FIX THIS LINE FOR THE LOVE OF GOD
-			//IT WONT WORK LIKE THIS
-			update.setUp(false); //THIS SHOULD BE PI, NOT FALSE
-			//CHANGE THIS LINE TO: update.setUp(PI);
-			
+		
+			update.setUp(PI); 
 			m4.start();
 			if (update.self_test()) {
 				System.out.println("Successful connection!");
@@ -429,7 +425,6 @@ public class core implements Runnable {
 			PI = false;
 		} else if (System.getProperty("os.name").toLowerCase().contains("mac")) {
 			System.out.println("Your OS, MAC, is not full supported! Motor controle disabled");
-			// System.out.println("Mac");
 			good = false;
 			PI = false;
 		} else if (System.getProperty("os.name").toLowerCase().contains("linux")) {
@@ -437,6 +432,7 @@ public class core implements Runnable {
 			if(System.getProperty("os.arch").toLowerCase().contains("arm")){
 				good = true;
 				PI = true;
+				System.out.println("Is PI");
 			}
 		} else {
 			System.out.println("Not sure if OS is supported, but ill try it");
@@ -669,6 +665,7 @@ public class core implements Runnable {
 		try{name = basic.mode_names[mode];}catch(Exception e){name = "No name";}
 		String all_info = "System temp: "+temp;
 		all_info += "\nSystem Status: "+status();
+		all_info += "\nIs PI: "+PI;
 		all_info += "\nInit, Run & Connected: "+INIT+", "+RUN + ", "+update.self_test();
 		all_info += "\nMode: " + mode + ", "+name+",";
 		all_info += " Stabalized: "+movable.isStabilize();
