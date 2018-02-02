@@ -161,7 +161,8 @@ public class parser implements Runnable {
 				break;
 			case "init":
 				try {
-					core.init();
+					if(arg[x+1].equals("-i")){System.out.println("quick");core.init(true);x++;;}else{
+						core.init();}
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
