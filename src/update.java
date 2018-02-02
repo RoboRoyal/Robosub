@@ -214,7 +214,7 @@ class update implements Runnable{//interface with sensors
      * @return
      */
     public static boolean self_test(){
-    	if(core.no_fill() || !IS_PI || useReal){//if no_fill or not an actual PI,
+    	if(core.no_fill() || !IS_PI || !useReal){//if no_fill or not an actual PI,
     		return true;//there is no point in actually running the test
     	}
     	//return true;
