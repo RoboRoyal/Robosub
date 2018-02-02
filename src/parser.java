@@ -185,9 +185,18 @@ public class parser implements Runnable {
 			case "test":
 				core.selfTest();
 				break;
+			case "logTraffic":
+				x++;
+				update.logTraffic = (arg[x].equals("true") || arg[x].equals("t"));
+				break;
+			case "isReal":
+				x++;
+				update.useReal = (arg[x].equals("true") || arg[x].equals("t"));
+				break;
 			case "shutOnFinish":
 				x++;
 				core.shutOnFinish = (arg[x].equals("true") || arg[x].equals("t"));
+				break;
 			case "waitForFinish":
 				while(core.running){
 					Thread.sleep(100);
