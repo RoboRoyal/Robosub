@@ -155,14 +155,24 @@ public class parser implements Runnable {
 					e1.printStackTrace();
 				}
 				break;
+			case "force":
+				System.exit(1);
+				debug.logWithStack("Forced exit from console");
+				break;
 			case "check":
 				x++;
 				core.check(valueOf(arg[x]));
 				break;
 			case "init":
 				try {
-					if(arg[x+1].equals("-i")){System.out.println("quick");core.init(true);x++;;}else{
-						core.init();}
+					try{
+						if(arg[x+1].equals("-i")){
+							System.out.println("quick");core.init(true);x++;
+						}else{
+							core.init();}
+					}catch(IndexOutOfBoundsException e){
+						core.init();
+					}
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
