@@ -87,7 +87,7 @@ class update implements Runnable{//interface with sensors
     	}*/
     	long start = System.currentTimeMillis();
         while(run){
-            if(serial.isOpen()){
+            if(serial.isOpen() || !useReal){
                 try{
                     if(ready && (System.currentTimeMillis() >= start+100)){
                     	start = System.currentTimeMillis();
