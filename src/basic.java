@@ -33,6 +33,7 @@ public class basic {
 	public static final String VERSION_NUMBER = "1.2.8";//general update/improvements from 1.2.1
 	public static int debug_lvl = 0; 
 	public static int logger_lvl = 5;
+	private static boolean exitBefore = false;
 	//private static Logger logger = Logger.getLogger(basic.class.getCanonicalName());
 
 	public static void main(String[] args) {
@@ -77,13 +78,20 @@ public class basic {
 	}
 
 	public static void shutdown(String why) throws InterruptedException {
+		if(exitBefore){
+			System.out.println("Program in cyclic shutdown cycle. Force ending. Error: "+why);
+			movable.stop();//try one last time to save the sub
+			movable.surface();
+			try{Thread.sleep(101);}catch(Throwable e){}//there is no point in trying to catch an error here
+			System.exit(1);//This is bad and there is no saving this
+		}
+		exitBefore = true;
 		core.shutdown(why);
 		run = false;
 		try {
 			Thread.sleep(150);//allow time for thread to end correctly
 			if(core.t!=null) core.t.stop();//may be not needed-but ensure it ends
 			core.reset();
-		} catch (NullPointerException e) {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
