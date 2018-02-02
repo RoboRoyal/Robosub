@@ -352,8 +352,11 @@ public class core implements Runnable {
 		return (sonar.get_pinger_dist() < 10);
 	}
 
-	//I knbow this is a bit ugly but it works well enough
 	static void init() throws InterruptedException {
+		init(false);
+	}
+	//I knbow this is a bit ugly but it works well enough
+	static void init(boolean quick) throws InterruptedException {
 		try{
 			if (!check(4)) {
 				return; //invalid to run
@@ -656,7 +659,7 @@ public class core implements Runnable {
 	}
 
 	public static String info() {
-		int temp = -100;
+		float temp = -100;
 		try{
 			temp = SystemInfo.getCpuTemperature();
 		}catch(Exception e){
