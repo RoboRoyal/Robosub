@@ -148,7 +148,7 @@ class update implements Runnable{//interface with sensors
         	log("Opening port [" + port + ":" + Integer.toString(br) + "]");
         }
         try {
-            serial.open(port, br);//actually opens port
+            if(useReal) serial.open(port, br);//actually opens port
             ready = true;//ready for output
             run = true;//Successfully started port
         } catch (IOException ioe) {
@@ -259,6 +259,10 @@ class update implements Runnable{//interface with sensors
      */
     public static void stop(){
     	//motorControle.set_motors(motor_stop);
+    	if(!serial.isOpen()){
+    		System.out.println("Port not open, cant close");
+    		return;
+    	}
     	try{
     		//TODO change to base value of motors 
         	set("[n1500,1500,1500,1500,1500,1500");//turns off all motors
@@ -266,7 +270,7 @@ class update implements Runnable{//interface with sensors
     		set("[s1,");//send shut down
     		//TODO send shut command
     		Thread.sleep(120);//wait for signal to go through
-    		serial.close();//close port
+    		if(useReal) serial.close();//close port
     	}catch(Exception e){
     		debug.error(e.getMessage());
     	}
