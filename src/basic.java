@@ -95,9 +95,9 @@ public class basic {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		System.out.print("Successful shutdown");
+		System.out.println("Successful shutdown");
 		debug.logWithStack("Successful shutdown: with stack");
-		System.exit(0);//IDK why but sometimes this is needed? Should fix, didn;t use to need this
+		//System.exit(0);//IDK why but sometimes this is needed? Should fix, didn;t use to need this
 	}
 
 	public static void start_prog() {
