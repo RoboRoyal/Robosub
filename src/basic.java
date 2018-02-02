@@ -97,6 +97,7 @@ public class basic {
 		}
 		System.out.print("Successful shutdown");
 		debug.logWithStack("Successful shutdown: with stack");
+		System.exit(0);//IDK why but sometimes this is needed? Should fix, didn;t use to need this
 	}
 
 	public static void start_prog() {
