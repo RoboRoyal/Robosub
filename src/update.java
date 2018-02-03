@@ -24,6 +24,7 @@ import com.pi4j.io.serial.SerialPortException;
  */
 @SuppressWarnings("unused")
 class update implements Runnable{//interface with sensors
+	private static int delayTime = 100;//ms
 	static boolean IS_PI;
     private static Thread t;
     private static int mod = 0;
@@ -89,7 +90,7 @@ class update implements Runnable{//interface with sensors
         while(run){
             if(serial.isOpen() || !useReal){
                 try{
-                    if(ready && (System.currentTimeMillis() >= start+100)){
+                    if(ready && (System.currentTimeMillis() >= start+delayTime)){
                     	start = System.currentTimeMillis();
                         //System.out.println("writing");
                         mod++;
@@ -219,13 +220,14 @@ class update implements Runnable{//interface with sensors
     	}
     	//return true;
         ready = false;//prepairs output
-        String newString = "[t";//indicates that this is a self test
+        String newString = "[t ";//indicates that this is a self test
         int test_num = (int) (Math.random()*121);//11^2
         newString += test_num;
         newString += ",";//sets the rest of the values
         set(newString);
         ready = true;
         String good_string = "Running self test: " + test_num;
+        init = 1;
         try{
         	while(init != 2){//waits for init for be 2
                 Thread.sleep(5);
@@ -234,11 +236,11 @@ class update implements Runnable{//interface with sensors
             System.out.println("This is kinda bad; thread interupt in update: "+e.getMessage());
         }
         if(!input.trim().equalsIgnoreCase(good_string.trim())){//checks validity of self test
-            System.out.println("Bad input from ard on st " + input);
+            System.out.println("Bad input from ard on st: " + input);
             debug.log_err("Bad input from ard on st " + input);
             return false;//no coms = bad
         }else{
-        	
+        	//Good test
             return true;
         }
     }
@@ -285,6 +287,12 @@ class update implements Runnable{//interface with sensors
     public static void force_pitch_value(int x){
     	IMU_pitch = x;
     }
+	public static int getDelayTime() {
+		return delayTime;
+	}
+	public static void setDelayTime(int delayTime) {
+		update.delayTime = delayTime;
+	}
     private static void set(String newOutputString){
     	if(basic.logger_lvl > 10) debug.log("Setting update.output @ : "+System.currentTimeMillis()+" : "+newOutputString);
     	output = newOutputString;
