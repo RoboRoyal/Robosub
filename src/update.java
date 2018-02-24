@@ -38,10 +38,9 @@ class update implements Runnable{//interface with sensors
     static boolean ready = false;
     static int IMU_pitch = 0, IMU_roll = 0, IMU_YAW = 0, depth = 0, waterLvl = 0, direction = 0;
     static boolean run = false;
-    //static double[] motor_stop = {0,0,0,0,0,0};
-    public static boolean logTraffic = true;
-    public static boolean useReal = true;
-    static int packetNum = 0;
+    public static boolean logTraffic = true;//logs the packets sent to Arduino
+    public static boolean useReal = true;//if true, actually sends packets. Otherwise, its just a test
+    static int packetNum = 0;//keeps track of packets
     private static String last = null;
     //private static Logger logger = Logger.getLogger(update.class.getCanonicalName());
     public static double get_depth(){
@@ -128,7 +127,7 @@ class update implements Runnable{//interface with sensors
         System.out.println("Setting up serial coms...");
         ard = "/dev/ttyACM0";//defualt location for arduino
         port = System.getProperty("serial.port", ard);//sets port object
-        br = Integer.parseInt(System.getProperty("baud.rate", "4800"));//gets baud rate
+        br = Integer.parseInt(System.getProperty("baud.rate", "9600"));//gets baud rate
         serial = SerialFactory.createInstance();//creates serial instance 
         if(IS_PI && useReal){//only adds even listener if a true pi
         	serial.addListener(event -> {//add event listener to get data from port
@@ -172,6 +171,9 @@ class update implements Runnable{//interface with sensors
     private static void parseIn(String me){
     	if(basic.logger_lvl > 10) debug.log("String recieved from serial @: "+System.currentTimeMillis()+" : "+me);
        if(!me.equals(input)){
+    	   try{
+    		   Thread.sleep(5);
+    	   }catch(Exception e){}
     	   init = 2;
     	   //System.out.println("i got something: "+me);
            input = me;
@@ -265,8 +267,8 @@ class update implements Runnable{//interface with sensors
     		System.out.println("Port not open, cant close");
     	}else{
     		try{
-        		//TODO change to base value of motors 
-            	set("[n1500,1500,1500,1500,1500,1500");//turns off all motors
+    			set("[n"+movable.base_speed+","+movable.base_speed+","+movable.base_speed+","+movable.base_speed+","+movable.base_speed+","+movable.base_speed+",");
+    			//set("[n1500,1500,1500,1500,1500,1500,");//turns off all motors
         		Thread.sleep(120);
         		set("[s1,");//send shut down
         		//TODO send shut command
