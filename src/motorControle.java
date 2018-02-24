@@ -14,11 +14,12 @@ class motorControle {//implements Runnable{
 	public static final int min_speed = 1250;//too high or too low can danmage them. 
 	//however, you can adjust if you need more power
 	//Actual max and min values of current motor servo controlers are 1100-1900
-	//TODO Changes might also need to be made in Arduino code 
 	
 	//static boolean init = false;//old
 	static double[] motor_vals = {0.0,0.0,0.0,0.0,0.0,0.0};//FLM,FRM,BLM,BRM,LM,RM
 	static boolean[] motor_enable = {true, true, true, true, true, true};
+	private static boolean invertVerticalMotors = false;
+	//private static int baseSpeed = 1500;
 
 	public static void set_motors(double[] x) throws Exception{
 		for(int i = 0;i<x.length;i++){
@@ -39,6 +40,9 @@ class motorControle {//implements Runnable{
 		}else if(x.length == 4){
 			//depth motors
 			for(int i=0;i<4;i++){
+				if(invertVerticalMotors){
+					x[i] = 3000-x[i];
+				}
 				motor_vals[i]=x[i];
 			}
 		}else if(x.length == 2){
@@ -49,6 +53,9 @@ class motorControle {//implements Runnable{
 		}else{
 			if(core.no_fill()){
 				for(int i=0;i<6;i++){
+					if(invertVerticalMotors && i <=4){
+						x[i] = 3000-x[i];
+					}
 					motor_vals[i]=x[i];
 				}
 			}else{
