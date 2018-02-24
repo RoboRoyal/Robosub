@@ -80,9 +80,9 @@ public class basic {
 	public static void shutdown(String why) throws InterruptedException {
 		if(exitBefore){
 			System.out.println("Program in cyclic shutdown cycle. Force ending. Error: "+why);
-			movable.stop();//try one last time to save the sub
-			movable.surface();
-			try{Thread.sleep(101);}catch(Throwable e){}//there is no point in trying to catch an error here
+			//movable.stop();//try one last time to save the sub
+			//movable.surface();
+			//try{Thread.sleep(101);}catch(Throwable e){}//there is no point in trying to catch an error here
 			System.exit(1);//This is bad and there is no saving this
 		}
 		exitBefore = true;
