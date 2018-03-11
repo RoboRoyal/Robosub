@@ -1,40 +1,58 @@
 #include <Wire.h>
 #include <Servo.h>
-#include <MadgwickAHRS.h>
-int TOPMAX = 1800;//absolute max and min allowed. too high or low could danmage servos
-int BOTMIN = 1300;//these can be adjusted, just be carefull
-//for IMU, Vcc=3.3, GND = ground, SDA = pin4, SCL = pin 5
-const int MPU_addr=0x68;  // I2C address of the MPU-6050
-int waterlvl = 0;//water sensor 
+/*SET-UP
+ * For IMU; Vcc=3.3, GND = ground, SDA = pin4, SCL = pin 5 (Analog)
+ * For WaterSensor; Vcc=5, GND=ground, S=A0; >20uF cap and 10k-100k ohm resistor between S and ground
+ * For Motors;All are digital 'D'. Each pin should be a PWM with a "~" next to it
+ * -Front Left = pin 3
+ * -Front Right = pin 5
+ * -Back Left = pin 6
+ * -Back Right = pin 9
+ * -Side Left = pin 10
+ * -Side Right = pin 11
+ * 
+ * Free Pins:
+ * D:2,4,7,8,12,13r
+ * A:2,3
+ */     
+ 
+//***** IMU Vars************
+//For IMU, Vcc=3.3, GND = ground, SDA = pin4, SCL = pin 5 (Analog)
+const int8_t MPU_addr=0x68;  // I2C address of the MPU-6050
+int16_t AcX,AcY,AcZ,Tmp,GyX,GyY,GyZ;//vars used for IMU 
+int16_t XA=0, YA=0, GZ=0;//Return data
+const int8_t  dak = 88;//const for fix()
+//**************************
+
+//******* Other Constant Values**********
+const short TOPMAX = 1900;//absolute max and min allowed. too high or low could danmage servos
+const short BOTMIN = 1100;//these can be adjusted, just be carefull
+//const int8_t ledPin = 4;
+const int8_t VoltageSensorPin = 1;
+//***************************************
+
+//******* Data Values***********
+int8_t waterSensorPin = 0;//water sensor - used for detecting leaks
 int depth = 0;//depth of sub in 'units'
-int16_t AcX,AcY,AcZ,Tmp,GyX,GyY,GyZ;
-int16_t XA, YA, GZ;
-const int16_t  dak = 88;
-int incomingByte = 0;   // for incoming serial data
-int ledPin = 4;
-int motor_pin[] = {3,5,6,9,10,11};
+int8_t incomingByte = 0;   // for incoming serial data
+//*****************************
+
+//******* Motor Values**********
+int8_t motor_pin[] = {3,5,6,9,10,11};//FLM,FRM,BLM,BRM,LM,RM
 int motors[] = {0,0,0,0,0,0};
-Servo s0;//Initilize servo for all 6 motors
-Servo s1;
-Servo s2;
-Servo s3;
-Servo s4;
-Servo s5;
+Servo s0, s1, s2, s3, s4, s5;//Initilize servo for all 6 motors
 Servo servos[] = {s0,s1,s2,s3,s4,s5};
-int count = 0;
-Madgwick filter;
+//******************************
+
+//Madgwick filter;
 void setup() {
-  Serial.begin(4800);     // opens serial port, sets data rate
-    //IMU init
-  Wire.begin();
+  Serial.begin(9600);     // opens serial port, sets data rate
+
+  Wire.begin();    //IMU init
   Wire.beginTransmission(MPU_addr);
   Wire.write(0x6B);  // PWR_MGMT_1 register
   Wire.write(0);     // set to zero (wakes up the MPU-6050)
   Wire.endTransmission(true);
-  filter.begin(10); //updating at 10Hz
-  XA=0;//initiat values to 0
-  YA = 0;
-  GZ = 0;
   for(int i = 0; i<6; i++){//initiat the motor controlers and set spedd to 0
       servos[i].attach(motor_pin[i]);
       servos[i].writeMicroseconds(1500);
@@ -43,7 +61,7 @@ void setup() {
 }
 
 void loop() {
-  if(true){//might impliment shut down
+  //if(true){//might impliment shut down
     wait_for_start();//wait for [ over serial
   int mode = is_mode();//get mode from first char
   if(mode == 1){//runs self test; returns passed in value
@@ -59,7 +77,7 @@ void loop() {
     debug();
   }
   incomingByte = 0;//resets byte
-  }
+  //}
 }
 
 void sendInfo(){//updates sensor values, then 
@@ -75,18 +93,18 @@ void sendInfo(){//updates sensor values, then
   GyY=Wire.read()<<8|Wire.read();  // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
   GyZ=Wire.read()<<8|Wire.read();  // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
   
-  filter.updateIMU(GyX, GyY, GyZ, AcX, AcY, AcZ);
   fix();
-  Serial.print(AcX);//pitch
+  Serial.print(AcX/3);//pitch
   Serial.print(",");
-  Serial.print(AcY);//roll
+  Serial.print(AcY/3);//roll
   Serial.print(",");
   Serial.print(GZ/100);//heading
   Serial.print(",");
   Serial.print(depth);
   Serial.print(",");
-  Serial.println(waterlvl);
-  //Serial.println(",3,0");//TODO depth and water level
+  Serial.println(getWater());
+  //Serial.print(",");
+  //Serial.println(getVoltage());
   
 }
 void fix(){
@@ -145,11 +163,21 @@ int is_mode(){//gets mode based on what the next char on the line is
     return -1;
   }
 }
+double getWater(){
+  return ((int)(analogRead(waterSensorPin)));
+}
 void wait_for_start() {//waits for the '[' char
   //Serial.write("started");
   while (incomingByte != 91) {
     incomingByte = Serial.read();
   }
+}
+boolean started(){
+  incomingByte = Serial.read();
+  if(incomingByte == 91){
+    return true;
+  }
+  return false;
 }
 void getnums(){//gets 6 number and makes sure they are within the correct range
   for(int i = 0; i <6;i++){
@@ -179,6 +207,10 @@ int getnum() {//turns ascii chars into int, ignoring non-number chars and stops 
   }
   return k;
 }
+//Battery Voltage
+int getVoltage(){//TODO
+  return constant*((int)(analogRead(VoltageSensorPin)));
+}
 float convertRawAcceleration(int aRaw) {
   // since we are using 2G range
   // -2g maps to a raw value of -32768
@@ -197,7 +229,32 @@ float convertRawGyro(int gRaw) {
   return g;
 }
 
-
+/************ New code, may replace existing loop()
+ *  void loop() {
+  if(started()){//might impliment shut down
+  int mode = is_mode();//get mode from first char
+  if(mode == 1){//runs self test; returns passed in value
+    selfTest();
+  }else if(mode == 2){//normal mode to set moders and return sensor data
+    getnums();//gets motor values
+    sendInfo();//sends sensor info
+    setMotors();//sets motor values
+    //if you're wondering why I wait to set motor values after I send data, there is a reason
+  }else if(mode == 3){//just an info dump
+    sendInfo();
+  }else{//simple debug mode
+    debug();
+  }
+  incomingByte = 0;//resets byte
+  }else{
+  counter ++;
+  if(counter > 1200){
+  stop();
+  }else{
+  delay(1);
+  }
+}
+ */
 
 //[ = 91
 //] = 93
