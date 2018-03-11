@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import Sonar.util.Search;
+import Sonar.util.SonarInterface;
 
 //import org.apache.log4j.BasicConfigurator;
 
@@ -39,7 +40,8 @@ public class basic {
 	public static void main(String[] args) {
 		//BasicConfigurator.configure();
 		try{
-			master(args);
+			//master(args);
+			SonarInterface.updateDir();
 		}catch(Throwable e){//trust me, catch throwable jic
 			e.printStackTrace();
 			System.out.println(e);
@@ -55,9 +57,9 @@ public class basic {
 		Date date = new Date();
 		debug.log("\n*----------------------------*");
 		debug.log("System started at: "+dateFormat.format(date));
-		debug.log("System started at: "+System.currentTimeMillis());
+		debug.log("System started at: "+System.currentTimeMillis());//This wont print anything if log is deleted in config
 		if (args.length > 1) {
-			System.out.print("I should add that in");
+			System.out.print("I should add that in, okay, hold on, there, did it");
 			parser.parse(args);
 		}
 		parser me2 = new parser();
@@ -73,16 +75,18 @@ public class basic {
 			System.out.print("How did you manage to mess THAT up?: "+e);
 			e.printStackTrace();
 			debug.error("They managed to mess up start: "+e.getMessage());
+			//Should probably exit, but 
 		}
 		
 	}
 
 	public static void shutdown(String why) throws InterruptedException {
-		if(exitBefore){
+		if(exitBefore){//If this happens, this isnt the first time the sub tried to shut down
 			System.out.println("Program in cyclic shutdown cycle. Force ending. Error: "+why);
 			//movable.stop();//try one last time to save the sub
 			//movable.surface();
 			//try{Thread.sleep(101);}catch(Throwable e){}//there is no point in trying to catch an error here
+			debug.logWithStack("Program in cyclic shutdown cycle. Force ending. Error: "+why);
 			System.exit(1);//This is bad and there is no saving this
 		}
 		exitBefore = true;
@@ -96,7 +100,7 @@ public class basic {
 			e.printStackTrace();
 		}
 		System.out.println("Successful shutdown");
-		debug.logWithStack("Successful shutdown: with stack");
+		debug.log("Successful shutdown: with stack");
 		//System.exit(0);//IDK why but sometimes this is needed? Should fix, didn;t use to need this
 	}
 

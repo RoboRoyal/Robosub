@@ -27,6 +27,7 @@ public class core implements Runnable {
 	private static boolean PI = false;
 	private static long MAX_TIME = 20000;// mili
 	private static short error = 0;
+	private static boolean error_allow = true;
 
 	static void wait_start(Integer integer) {
 		System.out.println();
@@ -292,7 +293,10 @@ public class core implements Runnable {
 		return false;
 	}
 	public static boolean status(){//this checks to see if there is a problem
-		if(status2()){//different from status2() as there needs 3 consecutive error for there to be an abort
+		if(!error_allow){
+			return true;
+		}
+		if(!status2()){//different from status2() as there needs 3 consecutive error for there to be an abort
 			error++;//this means one false reading wont abort the whole system
 		}else if(error>0){
 			error--;
@@ -303,9 +307,10 @@ public class core implements Runnable {
 			return true;
 		}
 	}
-
+ 
 	private static boolean status2() {// check to make sure everything is OK
-		if (update.getWaterSensor() > .5) {
+		//error_allow = false;
+		if (update.getWaterSensor() > 600) {//600 is a fair amount of water, <10 is no water
 			System.out.println("Takeing on water; level at: " + update.getWaterSensor());
 			/*if (basic.logger_lvl > 0)
 				debug.log("Takeing on water; level at: " + update.getWaterSensor());*/
@@ -334,7 +339,7 @@ public class core implements Runnable {
 				parser.parse("exit");
 				return false; //this can be removed if you don't care about this little CPU that tryed
 			}
-		}catch(IOException e){
+		}catch(Exception e){
 			System.out.println("Couldnt get temp: "+e.getMessage());
 		}
 		return true;
@@ -500,10 +505,24 @@ public class core implements Runnable {
 	 * Sets the maximum running time for the program. Doesn't apply to modes >=
 	 * 10.
 	 * 
-	 * @param value
+	 * @param value Max time in milliseconds
 	 */
 	public static void setMaxTime(Integer value) {
 		MAX_TIME = value;
+	}
+	
+	/**
+	 * Used to call selfTest2()
+	 * Prevents system from shutting down during self test
+	 * @return If self test was successful
+	 * @throws InterruptedException
+	 */
+	public static boolean selfTest() throws InterruptedException {
+		boolean error_tmp = error_allow;
+		error_allow = false;
+		boolean temp = selfTest2();
+		error_allow = error_tmp;
+		return temp;
 	}
 
 	/**
@@ -513,7 +532,7 @@ public class core implements Runnable {
 	 * @return
 	 * @throws InterruptedException
 	 */
-	public static boolean selfTest() throws InterruptedException {
+	private static boolean selfTest2() throws InterruptedException {
 		if (!INIT) {
 			System.out.println("Ya have to INIT and be running before self test ya dingis");
 			return false;
@@ -525,7 +544,7 @@ public class core implements Runnable {
 		}
 		boolean allGood = true;
 		if (update.self_test()) {
-			System.out.println("***Good connection***");
+			System.out.println("***Good connection***"); 
 		} else {
 			System.out.println("***Bad connection***");
 			allGood = false;
@@ -676,5 +695,5 @@ public class core implements Runnable {
 		all_info += "\n\tDepth: "+update.get_depth()+"; "+movable.getTarget_depth();
 		
 		return all_info;
-	}
+	}public String toString(){return info();}
 }

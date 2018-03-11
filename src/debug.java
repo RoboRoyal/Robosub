@@ -35,7 +35,7 @@ import com.pi4j.io.gpio.event.GpioPinListenerDigital;
 *
 */
 class debug{//blinks LED and logs errors
-	//private static Logger logger = Logger.getLogger(debug.class.getCanonicalName());
+	private static String logFile = "output/logFile.txt";
 	public static void blink(){
 		System.out.println("Blink");
 	}
@@ -48,13 +48,18 @@ class debug{//blinks LED and logs errors
 	    System.out.print(me);*/
 	    //System.out.println(stringWriter.toString());
 	}
+	/**
+	 * Prints things to screen as well as logs them
+	 * @param str To print and log
+	 */
 	public static void print(String str){
 		log(str);
 		System.out.println(str);
 	}
 	public static void error(String str){
 		movable.surface();
-		movable.surface();
+		try{Thread.sleep(100);}catch(Exception e){System.out.println("Error on sleep, debug.error(): "+e);}
+		movable.stop();
 		log_err("Aborting: Error:"+str);
 		blink();
 		blink();
@@ -68,7 +73,7 @@ class debug{//blinks LED and logs errors
 	    me += " - From thread: "+Thread.currentThread()+ " at time: "+dateFormat.format(date);
 	    //System.out.println("This is it: "+me);
 		try {
-	        throw new IOException("Thrown by debug manager");
+	        throw new IOException("Thrown by debug manager: debug.log_err()");
 	    }
 	    catch (IOException e) {
 	    	StringWriter sw = new StringWriter();
@@ -83,31 +88,35 @@ class debug{//blinks LED and logs errors
 		DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
 		Date date = new Date();
 	    me += "\n - From thread: "+Thread.currentThread()+ " at time: "+dateFormat.format(date);
-		log("[Log with stack] Stack trace: "+getStackTrace()+"\n"+me);
+		log("[Log with stack] Stack trace: "+getStackTrace()+"\nMessage: "+me);
 	}
 	public static void log(String me) {
-		String logFile = "output/logFile.txt";
+		//String logFile = "output/logFile.txt";
 		StringBuilder temp = new StringBuilder();
 		try (Writer logOut = new BufferedWriter(new FileWriter(new File(logFile),true))) {
 			temp.append(me+"\n");
 			logOut.write(temp.toString());
 		} catch (IOException e) {
-			System.out.print("Problem writing to log file(log): " + e);
+			System.out.print("Problem writing to log file lofFile from debug.log(): " + e);
 		}finally{/*Finally*/}
 	}
+	/**
+	 * Deletes the log file
+	 * @param sure
+	 */
 	public static void del__log__(boolean sure){
-		String logFile = "output/logFile.txt";
+		//String logFile = "output/logFile.txt";
 		StringBuilder temp = new StringBuilder();
 		try (Writer logOut = new BufferedWriter(new FileWriter(new File(logFile)))) {
 			if(sure) temp.append("\n");
 			if(sure) logOut.write(temp.toString());
 		} catch (IOException e) {
-			System.out.print("Problem writing to log file(del_log_: " + e);
+			System.out.print("Problem deleting log file logFile from debug.del__log__(): " + e);
 		}finally{/*Finally*/}
 	}
 	public static String getStackTrace(){
 		try {
-	        throw new IOException("Thrown by debug manager");
+	        throw new IOException("Thrown by debug manager: Getting stack trace");
 	    }
 	    catch (IOException e) {
 	    	StringWriter sw = new StringWriter();

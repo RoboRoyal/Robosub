@@ -8,6 +8,8 @@ import java.util.Scanner;
 
 import com.pi4j.system.SystemInfo;
 
+import Sonar.util.Sonar_Test;
+
 //import org.apache.log4j.Logger;
 /**
  * Provides shell for user and parses config file and passed in arguments
@@ -93,6 +95,9 @@ public class parser implements Runnable {
 			if(basic.logger_lvl > 8) debug.log("Parsing input command: "+ arg[x]);
 			if(arg[x].contains("#")){x=arg.length+1; break;}
 			switch (arg[x]) {
+			case "test_sonar":
+				Sonar_Test.testSonar();
+				break;
 			case ""://to stop it from crashing for extra spaces
 				break;
 			case "max_time":
@@ -112,32 +117,38 @@ public class parser implements Runnable {
 				break;
 			case "END":
 				//End of config file
-				debug.log("Successful cfg parsing");
+				debug.log("Successful cfg parsing\n*----------------------*\n");
 				break;
 			case "face":
 				x++;
-				movable.face( Integer.valueOf(arg[x]));
+				movable.face(Integer.valueOf(arg[x]));
 				break;
+			case "set_direction":
 			case "set_dir":
 				x++;
 				movable.set_dir((double) Integer.valueOf(arg[x]));
 				break;
-			case "log_start":
+			case "log_time":
 				DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 				Date date = new Date();
 				debug.print("*----------------------------*");
-				debug.print("System started at: "+dateFormat.format(date));
-				debug.log("System started at: "+System.currentTimeMillis());
-				debug.log("System started by: "+System.getProperty("user.name"));
+				debug.print("System time is: "+dateFormat.format(date));
+				debug.log("System time is being logged now: "+System.currentTimeMillis());
+				debug.log("Started by: "+System.getProperty("user.name"));
 				debug.print("*----------------------------*\n");
 				break;
 			case "log_parser":
 				x++;
-				log_parser = arg[x].equals("true");
+				log_parser = isTrue(arg[x]);//arg[x].equalsIgnoreCase("true") || arg[x].equalsIgnoreCase("t");
 				break;
 			case "set_logger_lvl":
 				x++;
 				basic.logger_lvl = valueOf(arg[x]);
+				break;
+			case "mark":
+				DateFormat dateFormat3 = new SimpleDateFormat("HH:mm:ss");
+				Date date3 = new Date();
+				debug.print("Mark: "+dateFormat3.format(date3));
 				break;
 			case "pause":
 				x++;
@@ -196,22 +207,43 @@ public class parser implements Runnable {
 			case "test":
 				core.selfTest();
 				break;
+			case "allow_error":
+				//TODO
+				break;
+			case "log_info":
+				debug.log(core.info());
+				break;
+			case "log_start":
+				DateFormat dateFormat2 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+				Date date2 = new Date();
+				debug.log("*----------------------------*");
+				debug.log("System started at: "+dateFormat2.format(date2));
+				debug.log("System started at: "+System.currentTimeMillis());
+				debug.log("Started by: "+System.getProperty("user.name"));
+				debug.log("*----------------------------*\n");
+				break;
 			case "logTraffic":
 				x++;
-				update.logTraffic = (arg[x].equals("true") || arg[x].equals("t"));
+				update.logTraffic = isTrue(arg[x]);//(arg[x].equalsIgnoreCase("true") || arg[x].equalsIgnoreCase("t"));
 				break;
 			case "isReal":
 				x++;
-				update.useReal = (arg[x].equals("true") || arg[x].equals("t"));
+				update.useReal = isTrue(arg[x]);//(arg[x].equalsIgnoreCase("true") || arg[x].equalsIgnoreCase("t"));
+				break;
+			case "isReal?":
+				System.out.println(update.useReal);
 				break;
 			case "shutOnFinish":
 				x++;
-				core.shutOnFinish = (arg[x].equals("true") || arg[x].equals("t"));
+				core.shutOnFinish = isTrue(arg[x]);//(arg[x].equalsIgnoreCase("true") || arg[x].equalsIgnoreCase("t"));
 				break;
 			case "waitForFinish":
 				while(core.running){
 					Thread.sleep(100);
 				}
+				break;
+			case"coms":
+				System.out.println(update.self_test());
 				break;
 			case "wait":
 				x++;
@@ -233,6 +265,9 @@ public class parser implements Runnable {
 			case "force_update_parseIn":
 				x++;
 				update.force_update_parseIn(arg[x]);
+				break;
+			case "enter":
+				update.force_update_parseIn(arg[++x]);
 				break;
 			case "name":
 				displayName();
@@ -263,7 +298,8 @@ public class parser implements Runnable {
 				break;
 			case "motor_enable":
 				x++;
-				motorControle.motor_enable(valueOf(arg[x]),arg[x+1].equals("true)"));
+				motorControle.motor_enable(valueOf(arg[x]),isTrue(arg[x+1]));
+				//arg[x+1].equalsIgnoreCase("true") || arg[x+1].equalsIgnoreCase("t"));
 				x++;
 				break;
 			case "is_run":
@@ -284,7 +320,7 @@ public class parser implements Runnable {
 				break;
 			case "stabilize":
 				x++;
-				movable.stabilize(arg[x].equals("true"));
+				movable.stabilize(isTrue(arg[x]));
 				break;
 			case "info":
 				System.out.println(core.info());
@@ -323,6 +359,7 @@ public class parser implements Runnable {
 				}
 				RUN = false;
 				break;
+
 			case "update_force_water":
 					x++;
 					update.waterLvl = Integer.valueOf(arg[x]);
@@ -399,8 +436,10 @@ public class parser implements Runnable {
 		case "fr":
 			return 1;
 		case "bl":
+		case "bottom_left":
 			return 2;
 		case "br":
+		case "bottom_right":
 			return 3;
 		case "left":
 		case "l":
@@ -416,6 +455,9 @@ public class parser implements Runnable {
 			}
 		}
 		return 0;
+	}
+	public static boolean isTrue(String x){
+		return (x.equalsIgnoreCase("true") || x.equalsIgnoreCase("t") || x.equalsIgnoreCase("tru") || x.equalsIgnoreCase("treu"));
 	}
 	public static String a(){
 		return "Duckbot v"+basic.VERSION_NUMBER+" by CMPE Robosub Team 2017-2018";
@@ -441,7 +483,7 @@ public class parser implements Runnable {
 				line = in.nextLine();
 				parse(line);
 			}
-		}catch(Exception e){}
+		}catch(Exception e){System.out.println("Problem parsing file: "+f+". Problem: "+e);}
 	}
 	public static void parseFile(String fileName){
 		try (Scanner in = new Scanner(new File(fileName))){
@@ -450,7 +492,9 @@ public class parser implements Runnable {
 				line = in.nextLine();
 				parse(line);
 			}
-		}catch(Exception e){}
+		}catch(Exception e){
+			System.out.println("Error parsing config file: "+e);
+		} 
 	}
 	
 	public void config() {

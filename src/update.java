@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Scanner;
 
 import com.pi4j.io.serial.Serial;
 import com.pi4j.io.serial.SerialFactory;
@@ -42,7 +43,6 @@ class update implements Runnable{//interface with sensors
     public static boolean useReal = true;//if true, actually sends packets. Otherwise, its just a test
     static int packetNum = 0;//keeps track of packets
     private static String last = null;
-    //private static Logger logger = Logger.getLogger(update.class.getCanonicalName());
     public static double get_depth(){
         return depth;
     }
@@ -99,6 +99,9 @@ class update implements Runnable{//interface with sensors
     					}
     					if(logTraffic){
     						log(output);
+    					}
+    					if(!IS_PI){
+    						fakeReadIn();
     					}
                         Thread.sleep(80);
                     }
@@ -312,9 +315,24 @@ class update implements Runnable{//interface with sensors
 			temp.append(me+"\n");
 			logOut.write(temp.toString());
 		} catch (IOException e) {
-			System.out.print("Problem writing to: " + e);
+			System.out.print("Problem writing Serial file in update.log(): " + e);
 		}finally{/*Finally*/}
+		//Now read in file from serial in file
+		
 	}
+    public static void fakeReadIn(){
+    	String fileIn = "input/SerialInFile.txt";
+    	try (Scanner in = new Scanner(new File(fileIn))){
+			String line;
+			while (in.hasNextLine()) {
+				line = in.nextLine();
+				if(!line.startsWith("#") && line.length() >  8)
+					force_update_parseIn(line);
+			}
+		}catch(Exception e){
+			System.out.println("Error reading in SerialInFile file: "+e);
+		} 
+    }
     public static void del() {
 		String logFile = "output/SerialOutFile.txt";
 		StringBuilder temp = new StringBuilder();
@@ -322,7 +340,7 @@ class update implements Runnable{//interface with sensors
 			temp.append("\n");
 			logOut.write(temp.toString());
 		} catch (IOException e) {
-			System.out.print("Problem writing to: " + e);
+			System.out.print("Problem deleting file in update.del(): " + e);
 		}finally{/*Finally*/}
 	}
     

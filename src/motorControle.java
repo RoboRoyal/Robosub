@@ -16,11 +16,16 @@ class motorControle {//implements Runnable{
 	//Actual max and min values of current motor servo controlers are 1100-1900
 	
 	//static boolean init = false;//old
-	static double[] motor_vals = {0.0,0.0,0.0,0.0,0.0,0.0};//FLM,FRM,BLM,BRM,LM,RM
+	static double[] motor_vals = {1500,1500,1500,1500,1500,1500};//FLM,FRM,BLM,BRM,LM,RM
 	static boolean[] motor_enable = {true, true, true, true, true, true};
 	private static boolean invertVerticalMotors = false;
-	//private static int baseSpeed = 1500;
+	//private static final int baseSpeed = 1500;
 
+	/**
+	 * Sets motor values, formats and passes values to update
+	 * @param x Array of motor values, 2, 4, or 6 values
+	 * @throws Exception Incorrect number of motor values
+	 */
 	public static void set_motors(double[] x) throws Exception{
 		for(int i = 0;i<x.length;i++){
 			if(x[i]>max_speed){
@@ -33,7 +38,7 @@ class motorControle {//implements Runnable{
 			}
 		}
 		form++;
-		if(form%10==0 && basic.debug_lvl >=9){System.out.println("Motors: "); for(int i = 0;i<x.length;i++) System.out.print("Seting motor @: "+x[i]);if(form>12300) form =0;}
+		if(form%10==0 && basic.debug_lvl >= 9){System.out.println("Motors: "); for(int i = 0;i<x.length;i++) System.out.print("Seting motor @: "+x[i]);if(form>12300) form = 0;}
 		if(x.length == 6){
 			//all motors
 			motor_vals = x;

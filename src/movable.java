@@ -21,7 +21,7 @@ class movable implements Runnable {
 	private static double target_direction = 0;// in degrees
 	private static double sideMove = 0;//for movements laterally:side to side
 	private static int speed = 100;// not max speed, just normal seed
-	private static final int base_speed = 1500;
+	public static final int base_speed = 1500;
 	public static int mode = 0;// mode 0=don't move, 1=turn, 2=move and turn, 3
 								// = move forward with no turning, 5= no update
 								//6=side movement, no stabilization, experimental 
@@ -183,6 +183,8 @@ class movable implements Runnable {
 	public static void setSpeed(int new_speed) {
 		if(new_speed < 0 || new_speed >= 200){
 			debug.print("invalid speed set: "+new_speed);
+			System.out.println("invalid speed set");
+			return;
 		}
 		speed = new_speed;
 	}
