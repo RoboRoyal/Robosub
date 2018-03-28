@@ -19,7 +19,7 @@ import com.pi4j.io.serial.SerialPortException;
  * DO NOT put port these dummy libraries to the PI.
  * Be careful when changing anything in this class, espeshally setUp, parseIn, self_test and run
  * This code is not all that well written. Its not efficient, no error correction, or anything like that.
- * With that said, it is rubbost and never crashes. Also, its pretty darn accurate, even with no error correction.
+ * With that said, it is robust enough and never crashes. Also, its pretty darn accurate, even with no error correction.
  * @author Dakota
  *
  */
@@ -30,30 +30,34 @@ class update implements Runnable{//interface with sensors
     private static Thread t;
     private static int mod = 0;
     static int init = 0;
-    private static String ard;
-    private static String port;
-    private static int br;
+    private static final String ard = "/dev/ttyACM0";
+    //private static int ard_num = 0;
+    //private static final String port = System.getProperty("serial.port", ard);
+    private static final String port = ard;
+    private static final int br = 9600;//Integer.parseInt(System.getProperty("baud.rate", "9600"));
     private static Serial serial;
     private static String output = "[v";
     private static String input = "def";
     static boolean ready = false;
-    static int IMU_pitch = 0, IMU_roll = 0, IMU_YAW = 0, depth = 0, waterLvl = 0, direction = 0;
+    static int IMU_pitch = 0, IMU_roll = 0, IMU_YAW = 0, depth = 0, waterLvl = 0;
     static boolean run = false;
     public static boolean logTraffic = true;//logs the packets sent to Arduino
     public static boolean useReal = true;//if true, actually sends packets. Otherwise, its just a test
-    static int packetNum = 0;//keeps track of packets
+    private static int packetNum = 0;//, packetNumIn = 0;//keeps track of packets
     private static String last = null;
-    public static double get_depth(){
+	private static boolean logSerialIn = true;
+	private static String last2;
+    public static int get_depth(){
         return depth;
     }
-    public static double getWaterSensor() {
+    public static int getWaterSensor() {
         //checks if we are taking on water
         return waterLvl;
     }
     public static int currentDepth(){
         return depth;
     }
-    public static double sonar_dist(double freq){
+    /*public static double sonar_dist(double freq){
         return -1;
     }
     public static double sonar_dir(double freq){
@@ -61,15 +65,14 @@ class update implements Runnable{//interface with sensors
     }
     public static double sonar_depth(double freq, double current_depth){
         return -1;
-    }
-    public static double IMU_roll(){
+    }*/
+    public static int IMU_roll(){
         return IMU_roll;
     }
-    public static double IMU_pitch(){
+    public static int IMU_pitch(){
         return IMU_pitch;
     }
-    public static double IMU_yaw(){
-    	IMU_YAW = direction;
+    public static int IMU_yaw(){
         return IMU_YAW;
     }
     
@@ -100,22 +103,21 @@ class update implements Runnable{//interface with sensors
     					if(logTraffic){
     						log(output);
     					}
-    					if(!IS_PI){
+    					if(!IS_PI){//reads fake input data from input/SerialInFile.txt
     						fakeReadIn();
     					}
-                        Thread.sleep(80);
+                        Thread.sleep((long) (delayTime*.8));
                     }
                 }catch(Exception e){
                     debug.logWithStack("Problem with serial in updater: "+e.getMessage());
-                    System.out.print(e);
+                    System.out.print(e); 
                 }
             } 
         }
-        synchronized(t){
-            t.notify();
-        }
+        try{if(serial.isOpen()) serial.close();}catch(Exception e){System.out.println("Error closing serial: "+e);}
+        //synchronized(t){t.notify();}
     	try{
-    		Thread.sleep(100);
+    		Thread.sleep(delayTime);
     	}catch(Exception e){
             debug.error(e.getMessage());
             System.out.print(e);
@@ -128,26 +130,27 @@ class update implements Runnable{//interface with sensors
     public static void setUp(boolean PI){
     	IS_PI = PI;//sets global var
         System.out.println("Setting up serial coms...");
-        ard = "/dev/ttyACM0";//defualt location for arduino
-        port = System.getProperty("serial.port", ard);//sets port object
-        br = Integer.parseInt(System.getProperty("baud.rate", "9600"));//gets baud rate
+        //ard = "/dev/ttyACM0";//defualt location for arduino
+        //port = System.getProperty("serial.port", ard);//sets port object
+        //br = Integer.parseInt(System.getProperty("baud.rate", "9600"));//gets baud rate
         serial = SerialFactory.createInstance();//creates serial instance 
         if(IS_PI && useReal){//only adds even listener if a true pi
         	serial.addListener(event -> {//add event listener to get data from port
-                String payload;
+                String payload = "";
                 try {
+                	//Thread.sleep(5);
                     payload = event.getAsciiString();
                 } catch (IOException ioe) {
                     System.out.println("Failed to connect to arduino "+ioe.getMessage());
                     debug.log_err("Failed to connect to arduino "+ioe.getMessage());
                     throw new RuntimeException(ioe);
-                }
+                } //catch (InterruptedException e) {System.out.println("Error waiting for in update.setUp(): "+e);}
                 parseIn(payload);//parser input from port(Arduino)
             });
         }
         System.out.println("Opening port [" + port + ":" + Integer.toString(br) + "]");
         if(logTraffic){
-        	del();
+        	del();//deletes last serial log file
         	log("Opening port [" + port + ":" + Integer.toString(br) + "]");
         }
         try {
@@ -173,6 +176,9 @@ class update implements Runnable{//interface with sensors
      */
     private static void parseIn(String me){
     	if(basic.logger_lvl > 10) debug.log("String recieved from serial @: "+System.currentTimeMillis()+" : "+me);
+    	if(logTraffic){//TODO have seperate var for log in/log out?
+    		logIn(me);
+    	}
        if(!me.equals(input)){
     	   try{
     		   Thread.sleep(5);
@@ -183,36 +189,38 @@ class update implements Runnable{//interface with sensors
            if(input.length() >= 10 && me.startsWith("Running self test")){//checks for self test
                return;
            }else{
-               if(me.split(",").length == 5){//parses pitch, roll, direction, depth, and water level
-                   IMU_pitch = Integer.parseInt(me.split(",")[0].trim());
-                   IMU_roll = Integer.parseInt(me.split(",")[1].trim());
-                   direction = Integer.parseInt(me.split(",")[2].trim());
-                   depth = Integer.parseInt(me.split(",")[3].trim());
-                   waterLvl = Integer.parseInt(me.split(",")[4].trim());        
+        	   String[] meSplit = me.split(",");
+               if(meSplit.length == 5){//parses pitch, roll, direction, depth, and water level
+                   IMU_pitch = Integer.parseInt(meSplit[0].trim());
+                   IMU_roll = Integer.parseInt(meSplit[1].trim());
+                   IMU_YAW = Integer.parseInt(meSplit[2].trim());
+                   depth = Integer.parseInt(meSplit[3].trim());
+                   waterLvl = Integer.parseInt(meSplit[4].trim());        
                }else{
-                   System.out.println("Bad input from ard: "+me);
-                   debug.log("Bad input from ard: "+me);
+                   debug.print("Bad input from ard: "+me);
+                   debug.print("When sent: "+output);
                }
            }   
        }
     }
     /**
      * Sets up output data for setting motor values
-     * @param x Values for each motor
+     * @param motor_vals Values for each motor
      */
-    public static void set_motors(double[] x){
+    public static void set_motors(int[] motor_vals){
+    	boolean tmp = ready;
         ready = false;//waits for all values to be set
         String newString;
         newString = "[n";//indicates that this will be setting motor values
-        for(int i = 0; i<6; i++){//converts all double motor values to int ascii, seporated by commas
-        	newString += (int)(x[i]);
+        for(int i = 0; i<6; i++){//converts all motor values to int ascii, separated by commas
+        	newString += (motor_vals[i]);
         	newString += ",";
         }
         if(!core.RUN){//dont let motors turn on unless we are running
         	newString = "[v";
         }
         set(newString);//set new string and indicates output is ready
-        ready = true;
+        ready = tmp;
     }
     
     /**
@@ -229,6 +237,9 @@ class update implements Runnable{//interface with sensors
         int test_num = (int) (Math.random()*121);//11^2
         newString += test_num;
         newString += ",";//sets the rest of the values
+        try {
+			Thread.sleep(delayTime - 20);
+		} catch (InterruptedException e1) {System.out.println("Interupt in delay of update.selftest(): "+e1);}
         set(newString);
         ready = true;
         String good_string = "Running self test: " + test_num;
@@ -238,11 +249,11 @@ class update implements Runnable{//interface with sensors
                 Thread.sleep(5);
         	}
         }catch(Exception e){
-            System.out.println("This is kinda bad; thread interupt in update: "+e.getMessage());
+            System.out.println("This is kinda bad; thread interupt in update.selfTest: "+e.getMessage());
         }
         if(!input.trim().equalsIgnoreCase(good_string.trim())){//checks validity of self test
             System.out.println("Bad input from ard on st: " + input);
-            debug.log_err("Bad input from ard on st " + input);
+            debug.log("Bad input from ard on self test: " + input);
             return false;//no coms = bad
         }else{
         	//Good test
@@ -278,6 +289,7 @@ class update implements Runnable{//interface with sensors
         		Thread.sleep(120);//wait for signal to go through
         		if(useReal) serial.close();//close port
         	}catch(Exception e){
+        		System.out.println("Error in update.stop(): "+e);
         		debug.error(e.getMessage());
         	}
     	}
@@ -318,8 +330,25 @@ class update implements Runnable{//interface with sensors
 			System.out.print("Problem writing Serial file in update.log(): " + e);
 		}finally{/*Finally*/}
 		//Now read in file from serial in file
+	}
+    
+    public static void logIn(String me) {//TODO make one writer and close it at the end
+		if(me.equals(last2)){//Dont write duplicates
+			return;
+		}
+		last2 = me;
+		String logFile = "output/SerialLogIn.txt";
+		StringBuilder temp = new StringBuilder();
+		try (Writer logOut = new BufferedWriter(new FileWriter(new File(logFile),true))) {
+			temp.append("Packet "+packetNum+": ");
+			temp.append(me+"\n");
+			logOut.write(temp.toString());
+		} catch (IOException e) {
+			System.out.print("Problem writing Serial file in update.logIn(): " + e);
+		}finally{/*Finally*/}
 		
 	}
+    
     public static void fakeReadIn(){
     	String fileIn = "input/SerialInFile.txt";
     	try (Scanner in = new Scanner(new File(fileIn))){
@@ -335,21 +364,41 @@ class update implements Runnable{//interface with sensors
     }
     public static void del() {
 		String logFile = "output/SerialOutFile.txt";
-		StringBuilder temp = new StringBuilder();
-		try (Writer logOut = new BufferedWriter(new FileWriter(new File(logFile)))) {
-			temp.append("\n");
-			logOut.write(temp.toString());
+		try (Writer logOut = new FileWriter(new File(logFile))) {
+			logOut.write(" ");
 		} catch (IOException e) {
-			System.out.print("Problem deleting file in update.del(): " + e);
+			System.out.print("Problem deleting file in update.del(), Serial out file: " + e);
 		}finally{/*Finally*/}
+		
+		String logFile_in = "output/SerialLogIn.txt";
+		try (Writer logOut2 = new FileWriter(new File(logFile_in))) {
+			logOut2.write(' ');
+		} catch (IOException e) {
+			System.out.print("Problem deleting file in update.del(), Serial in file: " + e);
+		}finally{/*Finally*/}
+		
 	}
+    public static String ToString(){
+    	String me = "Pitch: " + IMU_pitch;
+    	me += "; Yaw: " + IMU_YAW;
+    	me += "; Roll: " + IMU_roll;
+    	me += "; Water: " + waterLvl;
+    	me += "; Depth: " + depth;
+		return me;
+    }
+    public static String portInfo(){
+    	return ard+"; "+br;
+    }
+    public static void resetPort(){
+    	try{if(serial.isOpen()) serial.close();}catch(Exception e){System.out.println("Error in update.resetPort(): "+e);}
+    }
     
     public void start() {
         if (t == null) {
             t = new Thread(this, "update");
             t.start();
         }else{
-       	 debug.logWithStack("Second instance being made: update");
+       	 debug.logWithStack("Second instance being made in update: " + t.getName());
         }
     }
 }

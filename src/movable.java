@@ -17,36 +17,37 @@ class movable implements Runnable {
 	static boolean stabilize = true;// Whether or not to actively stabilize the
 									// sub
 	//private static Logger logger = Logger.getLogger(movable.class.getCanonicalName());
-	private static double target_depth = 5;// in [no unit]
-	private static double target_direction = 0;// in degrees
-	private static double sideMove = 0;//for movements laterally:side to side
+	private static int target_depth = 5;// in [no unit]
+	private static int target_direction = 0;// in degrees
+	private static int sideMove = 0;//for movements laterally:side to side
 	private static int speed = 100;// not max speed, just normal seed
 	public static final int base_speed = 1500;
 	public static int mode = 0;// mode 0=don't move, 1=turn, 2=move and turn, 3
 								// = move forward with no turning, 5= no update
 								//6=side movement, no stabilization, experimental 
-	private static double[] motors = { base_speed, base_speed, base_speed, base_speed, base_speed, base_speed };// see basic for motor
+	private static int[] motors = { base_speed, base_speed, base_speed, base_speed, base_speed, base_speed };// see basic for motor
 														// names
-	private static double cal_pitch;//calabrated level pitch
-	private static double cal_roll;//calebrated stable roll
-	private static double target_pitch = 0.0;//target pitch
-	private static double target_roll = 0.0;//target roll angle
+	private static int cal_pitch;//calabrated level pitch
+	private static int cal_roll;//calebrated stable roll
+	private static final int C1 = 1, C2 = 1, C3 = 1;// C1, C2, C3 used for outside calibration
+	private static int target_pitch = 0;//target pitch
+	private static int target_roll = 0;//target roll angle
 	private static boolean use_IMU_cal = true;
 	public static boolean quick = false;
 	public static int getbase_speed(){return base_speed;}
 	public static boolean isStabilize() {
 		return stabilize;
 	}
-	public static double getTarget_depth() {
+	public static int getTarget_depth() {
 		return target_depth;
 	}
-	public static double getTarget_direction() {
+	public static int getTarget_direction() {
 		return target_direction;
 	}
-	public static double getcal_pitch(){
+	public static int getcal_pitch(){
 		return cal_pitch;
 	}
-	public static double getcal_roll(){
+	public static int getcal_roll(){
 		return cal_roll;
 	}
 	 
@@ -99,7 +100,7 @@ class movable implements Runnable {
 	 * @param tmp Stable motor position
 	 * @return New motor position
 	 */
-	private double[] side_move(double[] tmp) {
+	private int[] side_move(int[] tmp) {
 		//0,2=left;1,3=right
 		
 		//brute force way:
@@ -114,7 +115,7 @@ class movable implements Runnable {
 
 	/**
 	 * Turns sub in direction of dir This direction is
-	 * absolute(update.direction), not relative (Updates mode to 1)
+	 * absolute(update.IMU_YAW), not relative (Updates mode to 1)
 	 * 
 	 * @param dir
 	 */
@@ -132,7 +133,7 @@ class movable implements Runnable {
 	 * @param dir
 	 */
 	public static void face_R(int dir) {
-		dir = (dir + update.direction) % 360;
+		dir = (dir + update.IMU_YAW) % 360;
 		target_direction = dir;
 		if (!isFacing(dir)) {
 			mode = 1;
@@ -141,7 +142,7 @@ class movable implements Runnable {
 
 	/**
 	 * Moves sub in direction dir. Move and turns at same time This direction is
-	 * absolute(update.direction), not relative (Updates mode to 2)
+	 * absolute(update.IMU_YAW), not relative (Updates mode to 2)
 	 * 
 	 * @param dir
 	 */
@@ -157,7 +158,7 @@ class movable implements Runnable {
 	 * @param dir
 	 */
 	public static void moveInDir_R(int dir) {
-		dir = (dir + update.direction) % 360;
+		dir = (dir + update.IMU_YAW) % 360;
 		target_direction = dir;
 		mode = 2;
 	}
@@ -196,20 +197,20 @@ class movable implements Runnable {
 	 */
 	public static String print() {
 		String re = "Movable; Motors: ";
-		for (double i : motors) {
+		for (int i : motors) {
 			re += i + ", ";
 		}
 		re += " Target depth: " + target_depth;
 		re += " Target direction: " + target_direction;
 		re += " Mode: " + mode;
 		re += " Stabilize? " + stabilize;
-		re += " Dpth & Dir: " + update.depth + " " + update.direction;
+		re += " Dpth & Dir: " + update.depth + " " + update.IMU_YAW;
 		return re;
 	}
 
 	public static String print_motor_values() {
 		String re = "Movable; Motors: ";
-		for (double i : motors) {
+		for (int i : motors) {
 			re += i + ", ";
 		}
 		return re;
@@ -274,7 +275,7 @@ class movable implements Runnable {
 	}
 
 	/**
-	 * Stops and surfaces sub.
+	 * Stops and surfaces sub. Updates more to 0.
 	 */
 	public static void abort() {
 		stop();
@@ -286,26 +287,26 @@ class movable implements Runnable {
 	 * Uses values from update.directio (current facing direction) and target_direction and mode
 	 */
 	private static void internal_move() {
-		double LM = base_speed, RM = base_speed;
+		int LM = base_speed, RM = base_speed;
 		if (mode == 2) {// if move and turn set inital value to move forward
 			LM = base_speed + speed;
 			RM = base_speed + speed;
 		}
 		// if mode is 1(turn and dont move) or if we are far from correct
 		// direction, stop
-		if (mode == 1 || Math.abs(update.direction - target_direction) > 30) {
+		if (mode == 1 || Math.abs(update.IMU_YAW - target_direction) > 30) {
 			LM = base_speed;
 			RM = base_speed;
 		}
 		// if we aren't in correct direction:
 		if (!isCorrect() && mode > 0) {
-			if ((target_direction + update.direction) % 360 < 180) {// turn
+			if ((target_direction + update.IMU_YAW) % 360 < 180) {// turn
 																	// right
-				LM = LM + 25 + 2*(180 - Math.abs(Math.abs(target_direction - update.direction) - 180));
-				RM = RM - 25 - 2*(180 - Math.abs(Math.abs(target_direction - update.direction) - 180));
+				LM = LM + 25 + 2*(180 - Math.abs(Math.abs(target_direction - update.IMU_YAW) - 180));
+				RM = RM - 25 - 2*(180 - Math.abs(Math.abs(target_direction - update.IMU_YAW) - 180));
 			} else {// turn left
-				LM = LM - 25 - 2*(180 - Math.abs(Math.abs(target_direction - update.direction) - 180));
-				RM = RM + 25 + 2*(180 - Math.abs(Math.abs(target_direction - update.direction) - 180));
+				LM = LM - 25 - 2*(180 - Math.abs(Math.abs(target_direction - update.IMU_YAW) - 180));
+				RM = RM + 25 + 2*(180 - Math.abs(Math.abs(target_direction - update.IMU_YAW) - 180));
 			}
 		}
 		if (mode == 3) {// if we are only suppose to move forward(mode 3) ignore
@@ -377,7 +378,7 @@ class movable implements Runnable {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			target_direction = update.direction;
+			target_direction = update.IMU_YAW;
 		}
 		mode = tmp;
 	}
@@ -395,7 +396,7 @@ class movable implements Runnable {
 	 * 
 	 * @param new_depth
 	 */
-	public static void set_depth(double new_depth) {
+	public static void set_depth(int new_depth) {
 		target_depth = new_depth;
 	}
 
@@ -404,7 +405,7 @@ class movable implements Runnable {
 	 * If mode is 5, motors will not update.
 	 * @return
 	 */
-	private static double[] stable() {
+	private static int[] stable() {
 		if(target_depth == 0)
 			return motors;
 		if (mode == 5)
@@ -425,10 +426,10 @@ class movable implements Runnable {
 	 * @param target_depth
 	 * @return
 	 */
-	private static double[] stable(double current_depth, double target_depth) {
+	private static int[] stable(int current_depth, int target_depth) {
 		int C1 = 10;
 		int d_m = base_speed + (int) ((target_depth - current_depth) * C1);
-		double[] motors = { d_m, d_m, d_m, d_m };
+		int[] motors = { d_m, d_m, d_m, d_m };
 		return motors;
 	}
 
@@ -442,13 +443,12 @@ class movable implements Runnable {
 	 * @param pitch
 	 * @return
 	 */
-	private static double[] stable(double current_depth, double target_depth, double roll, double pitch) {
+	private static int[] stable(int current_depth, int target_depth, int roll, int pitch) {
 		int K = 1; // constant multiplier for calibration
 		int FLM = base_speed, FRM = base_speed, BLM = base_speed, BRM = base_speed; // front left motor,
 															// etc. final value
 															// is motor speed
 		int base = 0; // base downward force to cancel out positive buoyancy
-		int C1 = 1, C2 = 1, C3 = 1;// C1, C2, C3 used for calibration
 
 		int depth_multiplier = 10 *(int) ((target_depth - current_depth) * C1);
 		int pitch_multiplier = 2*(int) (((cal_pitch - target_pitch) - pitch) * C2); // can replace 0 with
@@ -456,12 +456,12 @@ class movable implements Runnable {
 															// IMU when level---DONE
 		int roll_multiplier = 2*(int) (((cal_roll - target_roll) - roll) * C3);
 
-		FLM += (double) (K * (base + depth_multiplier + pitch_multiplier + roll_multiplier));
-		FRM += (double) K * (base + depth_multiplier + pitch_multiplier - roll_multiplier);
-		BLM += (double) K * (base + depth_multiplier - pitch_multiplier + roll_multiplier);
-		BRM += (double) K * (base + depth_multiplier - pitch_multiplier - roll_multiplier);
+		FLM += K * (base + depth_multiplier + pitch_multiplier + roll_multiplier);
+		FRM += K * (base + depth_multiplier + pitch_multiplier - roll_multiplier);
+		BLM += K * (base + depth_multiplier - pitch_multiplier + roll_multiplier);
+		BRM += K * (base + depth_multiplier - pitch_multiplier - roll_multiplier);
 
-		double[] motors = { FLM, FRM, BLM, BRM };
+		int[] motors = { FLM, FRM, BLM, BRM };
 		// for(int i = 0; i < 4; i++) System.out.println("mot" + motors[i]);
 		return motors;
 	}
@@ -481,13 +481,13 @@ class movable implements Runnable {
 
 	/**
 	 * Returns if sub is facing within 4 degrees of direction dir. This
-	 * direction is absolute(update.direction), not relative
+	 * direction is absolute(update.IMU_YAW), not relative
 	 * 
 	 * @param dir
 	 * @return
 	 */
-	public static boolean isFacing(double dir) {
-		if (Math.abs(update.direction - dir) < 4) {
+	public static boolean isFacing(int dir) {
+		if (Math.abs(update.IMU_YAW - dir) < 4) {
 			return true;
 		}
 		return false;
@@ -500,9 +500,9 @@ class movable implements Runnable {
 	 * @param dir
 	 * @return
 	 */
-	public static boolean isFacing_R(double dir) {
-		dir = (dir + update.direction) % 360;
-		if (Math.abs(update.direction - dir) < 4) {
+	public static boolean isFacing_R(int dir) {
+		dir = (dir + update.IMU_YAW) % 360;
+		if (Math.abs(update.IMU_YAW - dir) < 4) {
 			return true;
 		}
 		return false;
@@ -514,7 +514,7 @@ class movable implements Runnable {
 	 * @return
 	 */
 	public static boolean isCorrect() {
-		if (Math.abs(update.direction - target_direction) < 4) {
+		if (Math.abs(update.IMU_YAW - target_direction) < 4) {
 			return true;
 		}
 		return false;
@@ -522,12 +522,12 @@ class movable implements Runnable {
 
 	/**
 	 * Sets target direction of sub without changing mode. This direction is
-	 * absolute(update.direction), not relative. Better to use face() or
+	 * absolute(update.IMU_YAW), not relative. Better to use face() or
 	 * moveInDir().
 	 * 
 	 * @param dir
 	 */
-	public static void set_dir(double dir) {
+	public static void set_dir(int dir) {
 		target_direction = dir;
 	}
 
@@ -537,7 +537,7 @@ class movable implements Runnable {
 	 * 
 	 * @param dir
 	 */
-	public static void set_dir_R(double dir) {
+	public static void set_dir_R(int dir) {
 		target_direction = dir;
 	}
 
@@ -572,8 +572,8 @@ class movable implements Runnable {
 
 	//@SuppressWarnings("unused")-gives warning that 'unused' is unused. Ironic.
 	private static void stable_cal() throws Exception {
-		double roll_cal_total = 0;
-		double pitch_cal_total = 0;
+		int roll_cal_total = 0;
+		int pitch_cal_total = 0;
 		if(!quick){
 			for (int x = 0; x < 50; x++) {
 				pitch_cal_total += update.IMU_pitch();
@@ -604,7 +604,7 @@ class movable implements Runnable {
 			if (div == 10000)
 				div = -1;
 			div++;
-			double[] tmp = stable();
+			int[] tmp = stable();
 			if(mode == 6){
 				tmp = side_move(tmp);
 			}else{

@@ -117,7 +117,7 @@ class sonar implements Runnable {
 	}
 
 	private boolean sonar_self_test() {
-		try {
+		/*try {
 			double p = update.sonar_dir(0);
 			Thread.sleep(200);
 			if (p != update.sonar_dir(0)) {
@@ -125,7 +125,7 @@ class sonar implements Runnable {
 			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();
-		}
+		}*/
 		return true;
 	}
 

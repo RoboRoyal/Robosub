@@ -22,7 +22,7 @@ public class core implements Runnable {
 	public static boolean running = false;//actually running
 	static boolean shutOnFinish = true;
 	private static int OVER = 4;
-	public static int mode = 10;
+	public static int mode = 0;
 	public static boolean INIT = false;
 	private static boolean PI = false;
 	private static long MAX_TIME = 20000;// mili
@@ -43,8 +43,6 @@ public class core implements Runnable {
 	}
 	
 	static void shutdown(String why) throws InterruptedException {
-
-	//static void shutdown() throws InterruptedException {
 		if (basic.debug_lvl > 0)
 			debug.logWithStack("System receaved shutdown command becuase: "+why);
 		System.out.println("Ending...");
@@ -54,15 +52,14 @@ public class core implements Runnable {
 		Thread.sleep(100);//chiil for a sec
 		movable.stop();//stop and surface sub
 		movable.surface();
-		Thread.sleep(400);//give time for command to go through
+		Thread.sleep(200);//give time for command to go through
 		movable.stop_thread();//stop movable
-		Thread.sleep(400);
+		Thread.sleep(200);
 		sonar.stop();//stop sonar
-		// /motorControle.stop();
 		Thread.sleep(200);
 		update.stop();//give update time to give message then stop it
-		Thread.sleep(400);
-		//t = null; //may want to uncomment; helps reset thread when it works
+		Thread.sleep(200);
+		t = null; // helps reset thread when it works
 	}
 
 	/**
@@ -80,7 +77,7 @@ public class core implements Runnable {
 		boolean status = status();
 		int step = 0;
 		int state = 0;
-		while (!goal && ((mode >= 10) || (status && System.currentTimeMillis() < end_time))) {
+		while (RUN && !goal && ((mode >= 10) || (status && System.currentTimeMillis() < end_time))) {
 			step++;
 			if (mode < 0)
 				debug.error("Invalid mode");
@@ -112,7 +109,7 @@ public class core implements Runnable {
 			case (5):
 				movable.move();
 				if (step == 20) {
-					movable.moveInDir((update.direction + 180) % 360);
+					movable.moveInDir((update.IMU_YAW + 180) % 360);
 				}
 				if (step == 40) {
 					goal = true;
@@ -155,7 +152,9 @@ public class core implements Runnable {
 				running = false;//redudency lol
 			}
 			
-		} else {
+		} else if(!RUN){
+			//told to stop
+		}else {
 			System.out.println("IDK what happened but program stopped");
 			debug.log_err("IDK what happened but program stopped");
 		}
@@ -260,7 +259,7 @@ public class core implements Runnable {
 	}
 
 	private static boolean test_move(int state) throws InterruptedException {
-		movable.set_depth(5.0);
+		movable.set_depth(5);
 		Thread.sleep(100);
 		if (state < 90) {
 			movable.move();
@@ -279,7 +278,7 @@ public class core implements Runnable {
 	}
 
 	public static boolean test_motors(int state) {
-		double[] motor_vals = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+		int[] motor_vals = { 0, 0, 0, 0, 0, 0 };
 		int mot = (int) (state / 33);
 		motor_vals[mot] = 100;
 		try {
@@ -329,11 +328,11 @@ public class core implements Runnable {
 		}
 		//TODO check anything else, tmp, battery level etc.
 		try{
-			if(SystemInfo.getCpuTemperature() > 90){
+			int temp = (int) SystemInfo.getCpuTemperature();
+			if(temp > 90 && temp < 98){
 				System.out.println("Things are getting hot!");
 				debug.log("CPU temp hot: "+SystemInfo.getCpuTemperature());
-			}
-			if(SystemInfo.getCpuTemperature() > 98){
+			}else if(temp >= 98){
 				System.out.println("Way too hot");
 				debug.log("CPU temp too hott: "+SystemInfo.getCpuTemperature());
 				parser.parse("exit");
@@ -413,7 +412,7 @@ public class core implements Runnable {
 		if (INIT && over < 8) {
 			System.out.println("Already init");
 			System.out.println("marker, try setting no_fill_ilv");
-			Thread.sleep(1200);
+			Thread.sleep(120);
 			return false;
 		}
 		if (System.getProperty("sun.arch.data.model").toLowerCase().contains("64")) {
@@ -424,12 +423,12 @@ public class core implements Runnable {
 		boolean good = false;
 		if (System.getProperty("os.name").toLowerCase().contains("win")) {
 			System.out.println("Your OS, WINDOWS, is not full supported! Motor controle disabled");
-			//System.out.println("Windows");
 			System.out.println(System.getProperty("os.arch"));
 			good = false;
 			PI = false;
 		} else if (System.getProperty("os.name").toLowerCase().contains("mac")) {
 			System.out.println("Your OS, MAC, is not full supported! Motor controle disabled");
+			System.out.println(System.getProperty("os.arch"));
 			good = false;
 			PI = false;
 		} else if (System.getProperty("os.name").toLowerCase().contains("linux")) {
@@ -438,6 +437,10 @@ public class core implements Runnable {
 				good = true;
 				PI = true;
 				System.out.println("Is PI");
+			}else{
+				System.out.println("Linux, not running on PI");
+				good = false;
+				PI = false;
 			}
 		} else {
 			System.out.println("Not sure if OS is supported, but ill try it");
@@ -446,6 +449,9 @@ public class core implements Runnable {
 		}
 		if (System.console() == null) {
 			System.out.println("No console");
+		}
+		if(!status()){
+			System.out.println("Failed status");
 		}
 		System.gc();
 		if (good && over > 0) {
@@ -533,6 +539,7 @@ public class core implements Runnable {
 	 * @throws InterruptedException
 	 */
 	private static boolean selfTest2() throws InterruptedException {
+		String failedTest = "";
 		if (!INIT) {
 			System.out.println("Ya have to INIT and be running before self test ya dingis");
 			return false;
@@ -547,6 +554,7 @@ public class core implements Runnable {
 			System.out.println("***Good connection***"); 
 		} else {
 			System.out.println("***Bad connection***");
+			failedTest += "Bad connection; ";
 			allGood = false;
 		}
 		//TODO check battery status and temp
@@ -556,44 +564,54 @@ public class core implements Runnable {
 		System.out.println("***All motors should have turned on. All motors should now be off***");
 		System.out.println("***Depth meter is reading "+ update.get_depth()+" units. Does this seem right?");
 		System.out.println("***Running core.status() test: "+status()+" ***");
+		System.out.println();
 		if(!status()){
 			allGood = false;
+			failedTest += "Failed status; ";
 		}
-		System.out.println("***Place sub on level ground. Test will resume in 5 secons***");
+		System.out.println("--->Place sub on level ground. Test will resume in 5 secons<---");
 		Thread.sleep(5000);
 		System.out.println("***Starting next test now***");
-		if (update.IMU_pitch > 2 || update.IMU_roll > 2) {
+		if (update.IMU_pitch > 5 || update.IMU_roll > 5) {
 			System.out.println(
-					"***Sub is not reading level; Roll: " + update.IMU_roll + " Pitch: " + update.IMU_pitch + "***");
-			System.out.println("***IMU data is wrong or sub is not level. Please check***");
+					"<Sub is not reading level; Roll: " + update.IMU_roll + " Pitch: " + update.IMU_pitch + ">");
+			System.out.println("--->IMU data is wrong or sub is not level. Please check<---");
 			allGood = false;
+			failedTest += "Sub not level; ";
 		} else {
 			System.out.println("***Data looks good!***");
-			System.out.println("***Exact results are: Roll: " + update.IMU_roll + " Pitch: " + update.IMU_pitch + "***");
+			System.out.println("<Exact results are: Roll: " + update.IMU_roll + " Pitch: " + update.IMU_pitch + ">");
 		}
+		System.out.println();
 		System.out.println("***Now starting tilt test***");
-		System.out.println("***Tilt sub aprox 30 degrees. Test will resume in 5 secons***");
+		System.out.println("--->Tilt sub aprox 30 degrees. Test will resume in 5 secons<---");
 		Thread.sleep(5000);
 		if (Math.abs(update.IMU_pitch) < 20) {
-			System.out.println("***Sub is not reading tilt; Pitch: " + update.IMU_pitch + "***");
-			System.out.println("***IMU data is wrong or sub is not tilted. Please check***");
+			System.out.println("<Sub is not reading tilt; Pitch: " + update.IMU_pitch + ">");
+			System.out.println("--->IMU data is wrong or sub is not tilted. Please check<---");
 			allGood = false;
+			failedTest += "Tilt test; ";
 		} else {
 			System.out.println("***Data looks good!***");
-			System.out.println("***Exact results are: Roll: " + update.IMU_roll + " Pitch: " + update.IMU_pitch + "***");
+			System.out.println("<Exact results are: Roll: " + update.IMU_roll + " Pitch: " + update.IMU_pitch + ">");
 		}
+		System.out.println();
 		System.out.println("***Now starting roll test***");
-		System.out.println("***Roll sub aprox 30 degrees. Test will resume in 5 secons***");
+		System.out.println("--->Roll sub aprox 30 degrees. Test will resume in 5 secons<---");
 		Thread.sleep(5000);
 		if (Math.abs(update.IMU_roll) < 20) {
-			System.out.println("***Sub is not reading tilt; Pitch: " + update.IMU_roll + "***");
-			System.out.println("***IMU data is wrong or sub is not tilted. Please check***");
+			System.out.println("<Sub is not reading tilt; Pitch: " + update.IMU_roll + ">");
+			System.out.println("--->IMU data is wrong or sub is not tilted. Please check<---");
 			allGood = false;
+			failedTest += "Pitch test; ";
 		} else {
 			System.out.println("***Data looks good!***");
-			System.out.println("***Exact results are: Roll: " + update.IMU_roll + " Pitch: " + update.IMU_pitch + "***");
+			System.out.println("<Exact results are: Roll: " + update.IMU_roll + " Pitch: " + update.IMU_pitch + ">");
 		}
+		System.out.println();
 		System.out.println("***Now running extended connection test***");
+		System.out.println("--->Place sub back on level ground. Test will resume in 5 secons<---");
+		Thread.sleep(5000);
 		int t;
 		int suc = 0;
 		for (t = 0; t < 25; t++) {
@@ -602,11 +620,12 @@ public class core implements Runnable {
 		}
 		if (suc != t) {
 			allGood = false;
+			failedTest += "Extended connection test; ";
 			System.out.println("***Sub DID NOT pass extended connection test. Check connection.***");
-			System.out.println("Exact ratio is: " + suc + " sucsesses out of " + t + " trials");
+			System.out.println("<Exact ratio is: " + suc + " sucsesses out of " + t + " trials>");
 		} else {
 			System.out.println("***Sub passed extended connection test. Check connection.***");
-			System.out.println("***Exact ratio is: " + suc + " sucsesses out of " + t + " trials***");
+			System.out.println("<Exact ratio is: " + suc + " sucsesses out of " + t + " trials>");
 		}
 		System.out.println("Running status test");
 		Thread.sleep(500);
@@ -622,7 +641,8 @@ public class core implements Runnable {
 		} else {
 			System.out.println("***Sub didn't pass all tests. Please check it***");
 			debug.log("Sub did not pass full self test");
-		}
+			debug.print("Failed tests: " + failedTest);
+		} 
 		return allGood;
 	}
 
@@ -686,14 +706,16 @@ public class core implements Runnable {
 		all_info += "\nSystem Status: "+status();
 		all_info += "\nIs PI: "+PI;
 		all_info += "\nInit, Run & Connected: "+INIT+", "+RUN + ", "+update.self_test();
-		all_info += "\nMode: " + mode + ", "+name+",";
-		all_info += " Stabalized: "+movable.isStabilize();
+		all_info += "\nMode: " + mode + ", "+name+"\n";
+		all_info += "Stabalized: "+movable.isStabilize()+", Movable mode: "+movable.mode;
 		all_info += "\nMotor Values: "+movable.print_motor_values();
-		all_info += "\nTelemitry; \n\tYaw(direction): "+update.IMU_yaw()+"; "+movable.getTarget_direction();
+		all_info += "\nTelemitry; Current, Target \n\tYaw(direction): "+update.IMU_yaw()+"; "+movable.getTarget_direction();
 		all_info += "\n\tPitch: "+update.IMU_pitch()+", "+movable.getcal_pitch();
 		all_info += "\n\tRoll: "+update.IMU_roll()+", "+movable.getcal_roll();
 		all_info += "\n\tDepth: "+update.get_depth()+"; "+movable.getTarget_depth();
 		
 		return all_info;
-	}public String toString(){return info();}
+	}
+	public String toString(){return info();}
+	public static void Seterror_allow(boolean a){error_allow = a; }
 }

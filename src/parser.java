@@ -8,7 +8,7 @@ import java.util.Scanner;
 
 import com.pi4j.system.SystemInfo;
 
-import Sonar.util.Sonar_Test;
+//import Sonar.util.Sonar_Test;
 
 //import org.apache.log4j.Logger;
 /**
@@ -19,9 +19,11 @@ import Sonar.util.Sonar_Test;
 public class parser implements Runnable {
 	Thread t;
 	private static boolean log_parser = false;
-	//private static Logger logger = Logger.getLogger(basic.class.getCanonicalName());
 	static boolean RUN = true;
 
+	/**
+	 * Main method of this class. Provides the interface for the shell and gets user input
+	 */
 	private void star() {
 		Scanner in = new Scanner(System.in);
 		displayWelcome();
@@ -29,42 +31,57 @@ public class parser implements Runnable {
 			try{
 				System.out.print("> ");
 				String line = in.nextLine();
-				if(log_parser || basic.logger_lvl > 3) debug.log("Parser line input: "+line);
+				if(log_parser || basic.logger_lvl >= 4) debug.log("Parser line input: "+line);
 				parser.parse(line);
 			}catch(Exception e){}
 		}
 		in.close();
 	}
 
+	/**
+	 * Displays the name and version
+	 */
 	private void displayWelcome() {
 		displayName();
 		System.out.println("Version: "+basic.VERSION_NUMBER);
 		
 	}
-
-	static void parse(String x) {
+/**
+ * Splits string x and parses each parameter
+ * @param x String to parse
+ */
+	public static void parse(String x) {
 		parse(x.split(" "));
 	}
 
+	/**
+	 * Handles problems form set()
+	 * @param args Arguments to parse
+	 * @return
+	 */
 	public static boolean parse(String[] args) {
 		try {
 			set(args);
 		} catch (IllegalArgumentException e) {
 			if (!"End".equals(e.getMessage())) {
-				System.out.println("Problem parsing command line arguments");
-				//logger.trace(e);
+				System.out.println("Problem parsing command line arguments: " + e);
 			}
 			System.out.println("Usage: ");
 			help(0);
 			return false;
 		} catch (InterruptedException e) {
-			e.printStackTrace();
+			System.out.println("Problem in parser.parse(String[]): "+e);
 		}
 		return true;
 	}
 
+	/**
+	 * Prints out help. Most help is in input/help.txt
+	 * Best help from calling help in parse. help(2)
+	 * @param i How much help you want
+	 */
 	private static void help(int i) {
-		if(i ==0) System.out.println("Please type help for more options");
+		if(i ==0){ System.out.println("Please type help for more options");
 		System.out.println("-t for max time(int)");
 		System.out.println("-m for mode(int)");
 		System.out.println("-ms [int] max speed");
@@ -73,7 +90,7 @@ public class parser implements Runnable {
 		System.out.println("wait [int] wait [#] miliseconds before starting");
 		System.out.println("start to start prog");
 		System.out.println("shut for shutdown");
-		if(i >= 1){
+		}else if(i == 1){
 			System.out.println("stop stop lateral movement");
 			System.out.println("send [string] to arduino, return answer");
 			System.out.println("log [string] logs word");
@@ -86,17 +103,31 @@ public class parser implements Runnable {
 			System.out.println("set_dir");
 			System.out.println("face");
 			System.out.println("set bebug.logger level, self test, etc");
+		}else{
+			try (Scanner in = new Scanner(new File("input/help.txt"))){
+				String line = " ";
+				while (in.hasNextLine() && !line.equals(("$"))) {
+					System.out.println(line);
+					line = in.nextLine();
+				}
+			}catch(Exception e){
+				System.out.println("Error parsing help file: "+e);
+			} 
 		}
 	}
 
+	/**
+	 * What does most of the actual parsing
+	 * @param arg Arguments to parse
+	 * @throws InterruptedException
+	 */
 	private static void set(String[] arg) throws InterruptedException {
-		//int speed = 100;
 		for (int x = 0; x < arg.length; x ++) {
 			if(basic.logger_lvl > 8) debug.log("Parsing input command: "+ arg[x]);
 			if(arg[x].contains("#")){x=arg.length+1; break;}
 			switch (arg[x]) {
 			case "test_sonar":
-				Sonar_Test.testSonar();
+				//Sonar_Test.testSonar();
 				break;
 			case ""://to stop it from crashing for extra spaces
 				break;
@@ -123,10 +154,10 @@ public class parser implements Runnable {
 				x++;
 				movable.face(Integer.valueOf(arg[x]));
 				break;
-			case "set_direction":
+			case "set_direction"://Better to use face() or MoveInDir()
 			case "set_dir":
 				x++;
-				movable.set_dir((double) Integer.valueOf(arg[x]));
+				movable.set_dir(Integer.valueOf(arg[x]));
 				break;
 			case "log_time":
 				DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
@@ -167,12 +198,12 @@ public class parser implements Runnable {
 				}
 				break;
 			case "force":
-				System.exit(1);
 				debug.logWithStack("Forced exit from console");
+				System.exit(1);				
 				break;
 			case "check":
 				x++;
-				core.check(valueOf(arg[x]));
+				System.out.println(core.check(valueOf(arg[x])));
 				break;
 			case "init":
 				try {
@@ -208,7 +239,7 @@ public class parser implements Runnable {
 				core.selfTest();
 				break;
 			case "allow_error":
-				//TODO
+				core.Seterror_allow(isTrue(arg[++x]));
 				break;
 			case "log_info":
 				debug.log(core.info());
@@ -224,13 +255,13 @@ public class parser implements Runnable {
 				break;
 			case "logTraffic":
 				x++;
-				update.logTraffic = isTrue(arg[x]);//(arg[x].equalsIgnoreCase("true") || arg[x].equalsIgnoreCase("t"));
+				update.logTraffic = isTrue(arg[x]);
 				break;
-			case "isReal":
+			case "isreal":
 				x++;
-				update.useReal = isTrue(arg[x]);//(arg[x].equalsIgnoreCase("true") || arg[x].equalsIgnoreCase("t"));
+				update.useReal = isTrue(arg[x]);
 				break;
-			case "isReal?":
+			case "isreal?":
 				System.out.println(update.useReal);
 				break;
 			case "shutOnFinish":
@@ -266,9 +297,9 @@ public class parser implements Runnable {
 				x++;
 				update.force_update_parseIn(arg[x]);
 				break;
-			case "enter":
+			/*case "enter":
 				update.force_update_parseIn(arg[++x]);
-				break;
+				break;*/
 			case "name":
 				displayName();
 				break;
@@ -299,7 +330,6 @@ public class parser implements Runnable {
 			case "motor_enable":
 				x++;
 				motorControle.motor_enable(valueOf(arg[x]),isTrue(arg[x+1]));
-				//arg[x+1].equalsIgnoreCase("true") || arg[x+1].equalsIgnoreCase("t"));
 				x++;
 				break;
 			case "is_run":
@@ -316,7 +346,7 @@ public class parser implements Runnable {
 			case "max_speed":
 			case "-ms":
 				x++;
-				motorControle.max_speed = valueOf(arg[x]);
+				motorControle.setTopSpeed(valueOf(arg[x]));
 				break;
 			case "stabilize":
 				x++;
@@ -350,7 +380,6 @@ public class parser implements Runnable {
 				debug.log_err(arg[x]);
 				break;
 			case "del_log_":
-				//x++;
 				debug.del__log__(true);
 				break;
 			case "exit":
@@ -372,7 +401,7 @@ public class parser implements Runnable {
 				basic.debug_lvl = valueOf(arg[x]);
 				break;
 			case "mot":
-				double[] motor_vals = { 1500, 1500, 1500, 1500, 1500, 1500 };
+				int[] motor_vals = { 1500, 1500, 1500, 1500, 1500, 1500 };
 				try{
 					x++;
 					motor_vals[valueOf(arg[x])] = valueOf(arg[++x]);
@@ -397,11 +426,20 @@ public class parser implements Runnable {
 				x++;
 				System.out.println(arg[x]);
 				break;
+			case "parsefile":
+				parseFile(arg[++x]);
+				break;
 			case "start":
 				if (core.INIT) {
 					basic.start_prog();
 				} else {
 					System.out.println("Can't start run mode, you have not initilized");
+				}
+				break;
+			case "giveupdateinfo":
+				for(int mine = 0; mine < 100; mine++){
+					System.out.println(update.ToString());
+					Thread.sleep(500);
 				}
 				break;
 			case "help":
@@ -415,6 +453,11 @@ public class parser implements Runnable {
 		}
 	}
 
+	/**
+	 * Transforms string to int
+	 * @param string to convert to int
+	 * @return int
+	 */
 	private static int valueOf(String string) {
 		switch(string.toLowerCase()){
 		case "dog":
@@ -456,6 +499,11 @@ public class parser implements Runnable {
 		}
 		return 0;
 	}
+	/**
+	 * Checks for many different interpretations of true
+	 * @param x is true?
+	 * @return
+	 */
 	public static boolean isTrue(String x){
 		return (x.equalsIgnoreCase("true") || x.equalsIgnoreCase("t") || x.equalsIgnoreCase("tru") || x.equalsIgnoreCase("treu"));
 	}
@@ -474,7 +522,7 @@ public class parser implements Runnable {
 		}catch(Exception e){}
 	}
 	public static void pause(int x){
-		try{Thread.sleep(x);}catch(Exception e){e.printStackTrace();}
+		try{Thread.sleep(x);}catch(Exception e){System.out.println("Problem in parse.pause(): " + e);}
 	}
 	public static void parseFile(File f){
 		try (Scanner in = new Scanner(f)) {
@@ -493,21 +541,13 @@ public class parser implements Runnable {
 				parse(line);
 			}
 		}catch(Exception e){
-			System.out.println("Error parsing config file: "+e);
+			System.out.println("Problem parsing file in parseFile(String): "+fileName+". Problem: "+e);
 		} 
 	}
 	
 	public void config() {
-		String blackFile = "input/config.cfg";
-		try (Scanner in = new Scanner(new File(blackFile))) {
-			String line;
-			while (in.hasNextLine()) {
-				line = in.nextLine();
-				parse(line);
-			}
-		}catch(Exception e){
-			System.out.println("Error; problem parsing cfg file: "+e);
-		}	
+		String configFile = "input/config.cfg";
+		parseFile(configFile);
 	}
 	
 	public void run() {
