@@ -317,13 +317,13 @@ public class core implements Runnable {
 			return false;// we are taking on water, abort!
 		}
 		if (Math.abs(update.IMU_pitch()) > 20 || Math.abs(update.IMU_roll()) > 20) {
-			System.out.println("Pitch or roll too great, shutting down for safty;");
+			System.out.println("Unsafe pitch/roll!");
 			System.out.println("pitch: " + update.IMU_pitch() + " roll: " + update.IMU_roll());
-			if (basic.logger_lvl > 0)
+			/*if (basic.logger_lvl > 0)
 				debug.log("pithc/roll too great;");
 			if (basic.logger_lvl > 0)
-				debug.log("pitch: " + update.IMU_pitch() + " roll: " + update.IMU_roll());
-			debug.log_err("Bad stable: pitch: " + update.IMU_pitch() + " roll: " + update.IMU_roll());
+				debug.log("pitch: " + update.IMU_pitch() + " roll: " + update.IMU_roll());*/
+			debug.log("Bad stable: pitch: " + update.IMU_pitch() + " roll: " + update.IMU_roll());
 			return false;
 		}
 		//TODO check anything else, tmp, battery level etc.
@@ -335,7 +335,7 @@ public class core implements Runnable {
 			}else if(temp >= 98){
 				System.out.println("Way too hot");
 				debug.log("CPU temp too hott: "+SystemInfo.getCpuTemperature());
-				parser.parse("exit");
+				parser.parse("exit");//TODO change
 				return false; //this can be removed if you don't care about this little CPU that tryed
 			}
 		}catch(Exception e){
@@ -365,45 +365,48 @@ public class core implements Runnable {
 	static void init() throws InterruptedException {
 		try{
 			if (!check(4)) {
+				debug.print("System did not pass check, will not init");
 				return; //invalid to run
 			}
 			if (basic.logger_lvl > 0)
 				debug.log("----Initiating system----");
 			System.out.println("----Initiating system----");
-			Thread.sleep(300);// wait
+			
+			/*Thread for update, connection between PI and arduino*/
 			update m4 = new update();
-		
 			update.setUp(PI); 
 			m4.start();
+			Thread.sleep(200);// wait for connection
+			
+			/*Checks if the connection is succsessful*/
 			if (update.self_test()) {
 				System.out.println("Successful connection!");
 			} else {
 				System.out.println("Unable to establish connection");
 			}
 			Thread.sleep(100);
+			
 			// set up IO
-			sonar me = new sonar();
-			me.start();
-			Thread.sleep(300);
-			// motorControle me2 = new motorControle();
-			// me2.start();
-			Thread.sleep(300);
+			//sonar me = new sonar();
+			//me.start();
+
+			Thread.sleep(200);
 			movable me3 = new movable();
 			me3.start();
 			while(!movable.initiated()){
 				Thread.sleep(50);
 			}
-			Thread.sleep(200);
+			Thread.sleep(100);
 			INIT = true;
 			if(true){
 				System.out.println("----System sucsessfully initiated----");
 				if (basic.logger_lvl > 0)
 					debug.log("Init sucsess");
 			}else{
-				System.out.println("Unkown problem occured");
+				debug.log("Unkown problem occured");
 			}
 		}catch(Exception elo){
-			debug.print("Error occured: "+elo);
+			debug.print("Error occured in core.init(): "+elo);
 			debug.log_err(elo.getMessage());
 		}
 	}
@@ -436,7 +439,7 @@ public class core implements Runnable {
 			if(System.getProperty("os.arch").toLowerCase().contains("arm")){
 				good = true;
 				PI = true;
-				System.out.println("Is PI");
+				System.out.println("Detected running on real pi");
 			}else{
 				System.out.println("Linux, not running on PI");
 				good = false;
@@ -702,7 +705,7 @@ public class core implements Runnable {
 		}
 		String name = null;
 		try{name = basic.mode_names[mode];}catch(Exception e){name = "No name";}
-		String all_info = "System temp: "+temp;
+		String all_info = "System temp: "+temp+",  Water Level: " + update.waterLvl;
 		all_info += "\nSystem Status: "+status();
 		all_info += "\nIs PI: "+PI;
 		all_info += "\nInit, Run & Connected: "+INIT+", "+RUN + ", "+update.self_test();

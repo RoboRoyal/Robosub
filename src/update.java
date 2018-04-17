@@ -40,7 +40,7 @@ class update implements Runnable{//interface with sensors
     private static String input = "def";
     static boolean ready = false;
     static int IMU_pitch = 0, IMU_roll = 0, IMU_YAW = 0, depth = 0, waterLvl = 0;
-    static boolean run = false;
+    static boolean RUN = false;
     public static boolean logTraffic = true;//logs the packets sent to Arduino
     public static boolean useReal = true;//if true, actually sends packets. Otherwise, its just a test
     private static int packetNum = 0;//, packetNumIn = 0;//keeps track of packets
@@ -78,18 +78,8 @@ class update implements Runnable{//interface with sensors
     
     @Override
     public void run(){
-    	/*while(run){
-    		mod++;
-    		if(mod%1==0 && basic.debug_lvl > 5) System.out.println("Sending packet: "+mod+" as: "+output);
-    		try{
-        		Thread.sleep(100);
-        	}catch(Exception e){
-                debug.error(e.getMessage());
-                System.out.print(e);
-            }
-    	}*/
     	long start = System.currentTimeMillis();
-        while(run){
+        while(RUN){
             if(serial.isOpen() || !useReal){
                 try{
                     if(ready && (System.currentTimeMillis() >= start+delayTime)){
@@ -130,21 +120,16 @@ class update implements Runnable{//interface with sensors
     public static void setUp(boolean PI){
     	IS_PI = PI;//sets global var
         System.out.println("Setting up serial coms...");
-        //ard = "/dev/ttyACM0";//defualt location for arduino
-        //port = System.getProperty("serial.port", ard);//sets port object
-        //br = Integer.parseInt(System.getProperty("baud.rate", "9600"));//gets baud rate
-        serial = SerialFactory.createInstance();//creates serial instance 
         if(IS_PI && useReal){//only adds even listener if a true pi
         	serial.addListener(event -> {//add event listener to get data from port
                 String payload = "";
                 try {
-                	//Thread.sleep(5);
                     payload = event.getAsciiString();
                 } catch (IOException ioe) {
-                    System.out.println("Failed to connect to arduino "+ioe.getMessage());
-                    debug.log_err("Failed to connect to arduino "+ioe.getMessage());
+                    System.out.println("Failed to connect to arduino: "+ioe.getMessage());
+                    debug.log_err("Failed to connect to arduino: "+ioe.getMessage());
                     throw new RuntimeException(ioe);
-                } //catch (InterruptedException e) {System.out.println("Error waiting for in update.setUp(): "+e);}
+                }
                 parseIn(payload);//parser input from port(Arduino)
             });
         }
@@ -156,14 +141,14 @@ class update implements Runnable{//interface with sensors
         try {
             if(useReal) serial.open(port, br);//actually opens port
             ready = true;//ready for output
-            run = true;//Successfully started port
+            RUN = true;//Successfully started port
         } catch (IOException ioe) {
         	System.out.println("Error with opening port");
             throw new RuntimeException(ioe);
         
     }catch(Exception e){
-    	System.out.println("Error is: "+e.getMessage());
-    	debug.log("Error opening port in update.setUp: "+e);
+    	System.out.println("Error opeing port in update.setup() is: "+e.getMessage());
+    	debug.log("Error opening port in update.setUp(): "+e);
     }
         System.out.println("Port is opened.");
     }
@@ -184,7 +169,6 @@ class update implements Runnable{//interface with sensors
     		   Thread.sleep(5);
     	   }catch(Exception e){}
     	   init = 2;
-    	   //System.out.println("i got something: "+me);
            input = me;
            if(input.length() >= 10 && me.startsWith("Running self test")){//checks for self test
                return;
@@ -231,7 +215,6 @@ class update implements Runnable{//interface with sensors
     	if(core.no_fill() || !IS_PI || !useReal){//if no_fill or not an actual PI,
     		return true;//there is no point in actually running the test
     	}
-    	//return true;
         ready = false;//prepairs output
         String newString = "[t ";//indicates that this is a self test
         int test_num = (int) (Math.random()*121);//11^2
@@ -293,9 +276,16 @@ class update implements Runnable{//interface with sensors
         		debug.error(e.getMessage());
         	}
     	}
-    	if(run){
-        	run = false;
-        	System.out.println("Connection terminated");
+    	if(RUN){
+        	RUN = false;
+        	debug.print("Connection terminated");
+    	}
+    	if(serial.isOpen()){
+    		try{serial.close();}catch(Exception e){debug.error(e.getMessage());}
+    	}
+    	try{SerialFactory.shutdown();}catch(Exception e){debug.error(e.getMessage());}
+    	if(t != null){
+    		//t.stop();
     	}
     }
     public static void force_roll_value(int x){

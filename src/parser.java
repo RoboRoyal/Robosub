@@ -33,7 +33,7 @@ public class parser implements Runnable {
 				String line = in.nextLine();
 				if(log_parser || basic.logger_lvl >= 4) debug.log("Parser line input: "+line);
 				parser.parse(line);
-			}catch(Exception e){}
+			}catch(Exception e){debug.print("Error in parser.star():" + e);}
 		}
 		in.close();
 	}
@@ -90,6 +90,7 @@ public class parser implements Runnable {
 		System.out.println("wait [int] wait [#] miliseconds before starting");
 		System.out.println("start to start prog");
 		System.out.println("shut for shutdown");
+		System.out.println("help for more info");
 		}else if(i == 1){
 			System.out.println("stop stop lateral movement");
 			System.out.println("send [string] to arduino, return answer");
@@ -388,7 +389,6 @@ public class parser implements Runnable {
 				}
 				RUN = false;
 				break;
-
 			case "update_force_water":
 					x++;
 					update.waterLvl = Integer.valueOf(arg[x]);
@@ -441,6 +441,12 @@ public class parser implements Runnable {
 					System.out.println(update.ToString());
 					Thread.sleep(500);
 				}
+				break;
+			case "whatson":
+				if(core.RUN){System.out.println("Core");}
+				if(update.RUN){System.out.println("Update");}
+				if(movable.RUN){System.out.println("Movable");}
+				if(parser.RUN){System.out.println("Parser");}
 				break;
 			case "help":
 			case "?":

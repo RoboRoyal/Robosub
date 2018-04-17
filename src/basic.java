@@ -115,7 +115,7 @@ public class basic {
 	}
 
 	private static void start() {
-		System.out.println("Started by: "+System.getProperty("user.name"));
+		debug.print("Started by: "+System.getProperty("user.name"));
 		try {
 			if (!core.INIT) {
 				System.out.print("Cant start without first initiating");

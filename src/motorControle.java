@@ -13,7 +13,9 @@ class motorControle {
 	public static final int min_speed = 1250;//too high or too low can danmage them. Hardware limit
 	//however, you can adjust if you need more power
 	//Actual max and min values of current motor servo controlers are 1100-1900
-	static int[] motor_vals = {1500,1500,1500,1500,1500,1500};//FLM,FRM,BLM,BRM,LM,RM
+	static int[] motor_vals = {movable.base_speed,movable.base_speed,movable.base_speed,
+			movable.base_speed,movable.base_speed,movable.base_speed};//FLM,FRM,BLM,BRM,LM,RM
+	//base speed = 1500
 	static boolean[] motor_enable = {true, true, true, true, true, true};
 	private static boolean invertVerticalMotors = false;
 	//private static final int baseSpeed = 1500;
@@ -72,7 +74,7 @@ class motorControle {
 		//possibly fix up this code to make it work better
 		for(int p = 0; p<6;p++){
 			if(!motor_enable[p]){
-				motor_vals[p] = 1500;//sets motor to off if its disable
+				motor_vals[p] = movable.base_speed;//sets motor to off if its disable, base_speed = 1500
 			}
 		}
 		update.set_motors(motor_vals);
@@ -94,11 +96,11 @@ class motorControle {
 	 */
 	public static void setTopSpeed(int newSpeed){
 		if(newSpeed + 1500 > max_speed){
-			System.out.println("Warning; invalid motor value, value too high.");
+			System.out.println("Warning; invalid motor value, value too high. Max speed is: " + max_speed);
 			newSpeed = max_speed;
 		}
 		if(1500 - newSpeed < min_speed){
-			System.out.println("Warning; invalid motor value, value too low.");
+			System.out.println("Warning; invalid motor value, value too low. Min speed is: " + min_speed);
 			newSpeed = min_speed;
 		}
 		TopSpeed = newSpeed;
