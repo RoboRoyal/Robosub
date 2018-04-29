@@ -44,10 +44,10 @@ public class Sonar_Test {
 		}
 		return numbers;	
 	}
-	private static int[] readIn(String file){
+	static int[] readIn(String file){
 		return readIn(file, getSize(file));
 	}
-	private static int[] readIn(String file, int size){
+	public static int[] readIn(String file, int size){
 		int[] numbers = new int[size];
 		try (Scanner in = new Scanner(new File(file))) {
 			for(int index = 0;index < size;index++){
@@ -59,7 +59,7 @@ public class Sonar_Test {
 		return numbers;	
 	}
 	
-	private static int size(String file){
+	public static int size(String file){
 		int size = 0;
 		try{
 			System.out.println(new File(file).length());

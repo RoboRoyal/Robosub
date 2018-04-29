@@ -3,7 +3,44 @@ package Sonar.util;
 public class SonarExec implements Runnable {
 	private boolean RUN = false;
 	private Thread t;
-	private pingerReader left, right;
+	//private pingerReader left, right;
+	static String left = "left.txt";
+	static String right = "right.txt";
+	
+	public static int light(){
+		int dir = 0;
+		int bucket = 0;
+		socketMe2 me = new socketMe2();
+		me.start();
+		System.out.println(me.send("start"));
+		me.waitEnd();
+		System.out.println(me.send("close"));
+		me.close();
+		try{Thread.sleep(100);}catch(Exception e){}
+		
+		int min = Sonar_Test.size(left);
+		if(Sonar_Test.size(left)>Sonar_Test.size(right))
+			min = Sonar_Test.size(right);
+		
+		Search.left=Sonar_Test.readIn(left,min);
+		Search.right=Sonar_Test.readIn(right,min);
+		System.out.println("Got data; "+Search.left.length+", "+Search.right.length);
+		try{
+			bucket = Search.findBucket();
+			System.out.println("Bucket is: "+bucket);
+		}catch(Exception e){
+			System.out.println("Fail1: "+e);
+			e.printStackTrace();
+		}
+		try{
+			dir = Search.findDir(bucket);
+			System.out.println("Dir is: "+dir);
+		}catch(Exception e){
+			System.out.println("Fail2: "+e);
+			e.printStackTrace();
+		}
+		return dir;
+	}
 
 	public void norm(){
 		//first time
