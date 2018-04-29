@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.Scanner;
 import com.pi4j.system.SystemInfo;
 
+import Sonar.util.SonarExec;
+
 //import org.apache.log4j.BasicConfigurator;
 //import org.apache.log4j.Logger;
 
@@ -90,6 +92,12 @@ public class core implements Runnable {
 				if(step == 20)
 					goal = true;
 			break;
+			case (2):
+			case(12):
+				int nextDir = SonarExec.light();
+				debug.print("Next dir is: "+nextDir);
+				movable.moveInDir_R(nextDir);
+				break;
 			case (3):
 				System.out.println("Running");
 				break;
@@ -114,10 +122,10 @@ public class core implements Runnable {
 				if (step == 40) {
 					goal = true;
 				}
-			case (2):
+			/*case (2):
 			case (12):
 				goal = sonar_nav();
-				break;
+				break;*/
 			default:
 				// def
 			}

@@ -29,7 +29,8 @@ class movable implements Runnable {
 														// names
 	private static int cal_pitch;//calabrated level pitch
 	private static int cal_roll;//calebrated stable roll
-	private static final int C1 = 1, C2 = 1, C3 = 1;// C1, C2, C3 used for outside calibration
+	//
+	private static final int DepthCalibration = 1, PitchCalibration = 1, RollCalibration = 1;//  used for outside calibration
 	private static int target_pitch = 0;//target pitch
 	private static int target_roll = 0;//target roll angle
 	private static boolean use_IMU_cal = true;
@@ -450,11 +451,11 @@ class movable implements Runnable {
 															// is motor speed
 		int base = 0; // base downward force to cancel out positive buoyancy
 
-		int depth_multiplier = 10 *(int) ((target_depth - current_depth) * C1);
-		int pitch_multiplier = 2*(int) (((cal_pitch - target_pitch) - pitch) * C2); // can replace 0 with
+		int depth_multiplier = 10 *(int) ((target_depth - current_depth) * DepthCalibration);
+		int pitch_multiplier = 2*(int) (((cal_pitch - target_pitch) - pitch) * PitchCalibration); // can replace 0 with
 															// number given by
 															// IMU when level---DONE
-		int roll_multiplier = 2*(int) (((cal_roll - target_roll) - roll) * C3);
+		int roll_multiplier = 2*(int) (((cal_roll - target_roll) - roll) * RollCalibration);
 
 		FLM += K * (base + depth_multiplier + pitch_multiplier + roll_multiplier);
 		FRM += K * (base + depth_multiplier + pitch_multiplier - roll_multiplier);
@@ -462,7 +463,6 @@ class movable implements Runnable {
 		BRM += K * (base + depth_multiplier - pitch_multiplier - roll_multiplier);
 
 		int[] motors = { FLM, FRM, BLM, BRM };
-		// for(int i = 0; i < 4; i++) System.out.println("mot" + motors[i]);
 		return motors;
 	}
 	
@@ -577,24 +577,23 @@ class movable implements Runnable {
 	 * @throws Exception
 	 */
 	private static void stable_cal() throws Exception {
+		final short CALIBRATION_NUM = 50;//number of measurements calibrations taken
 		int roll_cal_total = 0;
 		int pitch_cal_total = 0;
 		if(!quick){
-			for (int x = 0; x < 50; x++) {
+			for (int x = 0; x < CALIBRATION_NUM; x++) {
 				pitch_cal_total += update.IMU_pitch();
 				roll_cal_total += update.IMU_roll();
 				Thread.sleep(101);
 			}
-			cal_roll = roll_cal_total/50;
-			cal_pitch = pitch_cal_total/50;
+			cal_roll = roll_cal_total/CALIBRATION_NUM;
+			cal_pitch = pitch_cal_total/CALIBRATION_NUM;
 			debug.log("Calabrated roll: "+cal_roll+" pitch: "+cal_pitch);
 			if(cal_roll > 10 || cal_pitch > 10){
 				System.out.print("Invalid roll/pitch values");
 				System.out.print("Calabrated roll: "+cal_roll+" pitch: "+cal_pitch);
 				throw new Exception("Invalid calabration position. Reset sub position and reinitiate");
 			}
-			// double roll_cal = roll_cal_total/100;//calibration for IMU
-			// double pitch_cal = pitch_cal_total/100;
 		}
 	}
 
@@ -671,6 +670,7 @@ class movable implements Runnable {
 			t.start();
 		} else {
 			debug.logWithStack("Second instance being made: movable");
+			System.out.println("Second instance being made: movable :( ");
 		}
 	}
 
