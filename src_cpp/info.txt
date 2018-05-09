@@ -2,4 +2,4 @@ This is an old version that has not been tested and probably does not work.
 
 Even if it does work, it would only really be movable.cpp, nothing else.
 
-You can contanct Dakota Abernathy at abernathy900@umbc.edu for help with code.
+You can contanct Dakota Abernathy at abernathy900 @umbc.edu for help with code.
