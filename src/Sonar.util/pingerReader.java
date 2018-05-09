@@ -1,4 +1,4 @@
-package Sonar.util;
+package SonarUtil;
 
 import java.io.File;
 import java.util.Scanner;

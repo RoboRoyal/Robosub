@@ -19,7 +19,7 @@ from multiprocessing import Pool
 SPI_PORT   = 0
 SPI_DEVICE = 0
 HOST = "localhost"
-PORT = 9900
+PORT = 9901
 
 def read(file):
     #y = 6

@@ -1,4 +1,4 @@
-package Sonar.util;
+package SonarUtil;
 import java.util.Objects;
 
 public class Complex {

@@ -1,4 +1,4 @@
-package Sonar.util;
+package SonarUtil;
 
 
 //TODO https://sites.google.com/site/piotrwendykier/software/jtransforms

@@ -1,4 +1,4 @@
-package Sonar.util;
+package SonarUtil;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -69,7 +69,7 @@ public class socketMe2 implements Runnable {
 	
 	public socketMe2(){
 		try {
-			socket = new Socket("localhost", 9900);
+			socket = new Socket("localhost", 9901);
 		} catch (Exception e) {
 			System.out.println("That failed hard: " + e);
 		}
