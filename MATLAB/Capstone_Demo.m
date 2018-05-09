@@ -1,19 +1,20 @@
 %Dakota Abernathy
-Start = 3090; %when signal starts
-Durration = 500; %how long signal lasts
-freq = 25000; %freq of signal in Hz
-X_loc = 10; %pos of sub, meters
-Y_loc = -10; 
-dir = 30; %direction sub is facing
+Start = 3090; %when signal starts, all times are in milla seconds
+Durration = 500; %how long signal lasts, ms
+freq = 37500; %freq of signal in Hz
+X_loc = 8; %pos of sub, meters
+Y_loc = -15; 
+dir = 0; %direction sub is facing
 dir =- dir*pi/180;
 sep = 1; %distance between hydrophones
-sample_rate = 100000; %per
+sample_rate = 90 * 1000;%100000; %per
 speed = 1498; %of sound in water
 volume = 1000;
 do_dist_vol = 0;
 do_inter = 1;
 do_search = 0;
 do_auto=1;
+do_8bit = 0;
 simple = 255;
 grid_size = 20;
 num_pingers =  1;
@@ -26,6 +27,9 @@ right_d = sqrt(((sep/2)*sin(dir)-Y_loc)^2+((sep/2)*cos(dir)+X_loc)^2);
 left_t = (left_d / speed);
 right_t = right_d / speed;
 fun =@(x) rectpuls((x-Durration/(2*sample_rate) - Start/sample_rate),Durration/sample_rate) .* sin(freq.*x);
+%fun8 =@(x)double(uint8(fun(x)));
+to8 = @(x)double(int8(256*x))/256;
+to16 = @(x)double(int16(65536*x))/65536;
 interfearence =@(x) do_inter .*(.6* sin(1234.*x) + .8* cos(38.*x) + .45.*sin(6500.*(x+.0123)));
 y=linspace(0,2,sample_rate*2); %2 seconds at 100kHz
 if do_dist_vol == 0
@@ -33,6 +37,10 @@ if do_dist_vol == 0
 end
 left_data = ((volume/left_d^2)*fun(y-left_t)+interfearence(y))/10;
 right_data = ((volume/right_d^2)*fun(y-right_t)+interfearence(y))/10;
+if do_8bit ==1
+    left_data = to8(left_data);
+    right_data = to8(right_data);
+end
 
 if do_auto==1
     data = doWork(left_data,right_data,1,num_pingers,simple,bucket);
