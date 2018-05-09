@@ -34,7 +34,7 @@ import com.pi4j.io.gpio.event.GpioPinListenerDigital;
 * @author Dakota
 *
 */
-class debug{//blinks LED and logs errors
+public class debug{//blinks LED and logs errors
 	private static String logFile = "output/logFile.txt";
 	public static void blink(){
 		System.out.println("Blink");

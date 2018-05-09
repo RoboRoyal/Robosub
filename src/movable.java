@@ -9,7 +9,7 @@ package robosub;
  * @author Dakota
  *
  */
-class movable implements Runnable {
+public class movable implements Runnable {
 	Thread t;
 	static boolean RUN = false;// Initialize to false, must be set to true
 								// before running
@@ -35,6 +35,8 @@ class movable implements Runnable {
 	private static int target_roll = 0;//target roll angle
 	private static boolean use_IMU_cal = true;
 	public static boolean quick = false;
+	static boolean puase = false;
+	public static void puase(boolean en){puase = en;}//TODO
 	public static int getbase_speed(){return base_speed;}
 	public static boolean isStabilize() {
 		return stabilize;
@@ -605,6 +607,8 @@ class movable implements Runnable {
 	private void norm() throws Exception {
 		int div = 0;
 		while (RUN) {
+			while(puase)
+				try{Thread.sleep(100);}catch(Exception e){debug.print("Error in movable puase");}
 			if (div == 10000)
 				div = -1;
 			div++;

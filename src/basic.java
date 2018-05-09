@@ -30,7 +30,7 @@ public class basic {
 	private static boolean run = true;
 	private static core me;//this is to keep track of the thread so we can stop it for shutdown
 	public static final String[] MOTOR_LAYOUT = {"FL","FR","BL","BR","L","R"};
-	public static final String VERSION_NUMBER = "1.2.8";//general update/improvements from 1.2.1
+	public static final String VERSION_NUMBER = "1.5.6";//now with working sonar nav!
 	public static int debug_lvl = 0; 
 	public static int logger_lvl = 5;
 	private static boolean exitBefore = false;
