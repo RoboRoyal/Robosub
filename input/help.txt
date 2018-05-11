@@ -1,0 +1,68 @@
+max_time, -t <#>	Sets maximum running time for program, ms
+mode, -m <#,word>	Sets which mode program is running
+face <#>		Sets direction of sub, absolute value
+set_dir <#>		Sets direction of sub, absolute value
+log_time		Logs current time to log file
+set_logger_lvl <#>	Sets logger level, how much info is logged
+mark			Marks a point in log file
+shut			Shuts down system
+force			Force shut down system
+check <#>		Checks if the system could init, 'check 4'
+init ?-i		Initiates all system of Sub, -i = quick (only use for testing)
+test			Runs a self test on Sub
+log_info		Logs info from core to log file
+logTraffic <bool>	Can log serial info to log file
+isreal <bool>		Force sets program to run in real/fake mode(running on PI)
+isreal?			Shows if program is running in real/fake mode
+shutOnFinish <bool>	If true, program shuts down after goal is reached
+waitForFinish		Pauses parser unit core is no longer running
+coms			Returns value of self test
+wait <#>		Pauses parser, ms
+waitStart, -ws <#>	Waits a certain amount of time until start command is called, ms
+name			Displays the name
+movable			Displays info about movable class/thread
+max_speed, -ms <#>	Sets max speed of sub, arbitrary number, defualt = 100
+stabilize <bool>	Sets if sub uses active stabilization, default = true
+info			Prints info on the sub, current running
+reverse, backup		Forces the sub to move backwards
+sidemove <#>		Forces the sub to move sidways, speed = input, negitive = left
+log			Logs next argument passed, breaks at next space
+exit			Shuts down and exits program
+test_motors		Test all motors for 2 seconds
+turn_r <#>		Turns the sub right # amount, negitive vales = left
+start			Starts program
+help, ?			This
+$
+----- End of normal commands, the rest are just for debug and testing-----
+test_sonar
+END
+log_parser	<bool>	Log all things entered into parser
+pause <#>		Pauses system for <#> ms
+prop			Prints properties of system
+err <arg>		Forces err <arg>
+print_tmp		Prints temp of sub
+allow_error ?
+log_start		Logs stat time of prog
+i_wrote_this		R.R.
+force_update_parseIn <arg>
+nope			True
+no_fill_ilv -dont use
+movableForceMode <#>	Sets mode of movable to <#>
+-d <#>			Sets target depth
+forward			Forces sub to move forward
+stop			Stops all motors on sub
+motor_enable <#> <bool>	Enables motor <#> to state <bool>
+is_run			Returns if system is running
+f_roll_v <#>		Force sets roll in update
+speed <#>		Sets (A) speed for the sub
+send <arg>		Sends <arg> to arduino over update and returns return packet
+log_err <arg>		Forces an <arg> error in the system			
+del_log_		Deletes the log file
+update_force_water <#>	Sets the water level in update
+set_debug_lvl <#>	Higher number = slightly more data logged
+mot <#1> <#2>		Sets motor <#1> to value <#2>	
+about			Prints version number
+echo <arg>		Returns next argument
+giveupdateinfo		Prints update info 100 times ever .5 seconds
+parsefile <arg>		Parses file <arg>
+whatson 		Displays running threads

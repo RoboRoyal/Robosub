@@ -1,0 +1,15 @@
+#1st number is Pitch
+#2nd number is Roll
+#3rd is Yaw
+#4th is Depth
+#5th is water level
+
+#good input
+#2,3,4,5,6
+1,2,3,4,5
+#30,0,0,0,0
+#0,30,0,0,0
+#0,0,30,0,0
+
+#bad input
+#50,31,50,4,550
