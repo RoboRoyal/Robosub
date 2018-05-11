@@ -1,14 +1,11 @@
 package robosub;
 
-//import org.apache.log4j.Logger;
-
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 
-//import Sonar.util.*;
-
-//import org.apache.log4j.BasicConfigurator;
+import SonarUtil.*;
 
 /**
  * Holds the most basic functions but mostly helps initiate and shutdown
@@ -64,8 +61,9 @@ public class basic {
 		debug.log("\n*----------------------------*");
 		debug.log("System started at: "+dateFormat.format(date));
 		debug.log("System started at: "+System.currentTimeMillis());//This wont print anything if log is deleted in config
-		if (args.length > 1) {
-			System.out.print("I should add that in, okay, hold on, ok, there, I did it");
+		if (args.length > 1) {//dont worry if there is only one input
+			//System.out.print("I should add that in, okay, hold on, ok, there, I did it");
+			debug.print("Parsing command line inputs: "+Arrays.toString(args));
 			parser.parse(args);
 		}
 		parser me2 = new parser();
@@ -89,14 +87,12 @@ public class basic {
 	public static void shutdown(String why) throws InterruptedException {
 		if(exitBefore){//If this happens, this isnt the first time the sub tried to shut down
 			System.out.println("Program in cyclic shutdown cycle. Force ending. Error: "+why);
-			//movable.stop();//try one last time to save the sub
-			//movable.surface();
-			//try{Thread.sleep(101);}catch(Throwable e){}//there is no point in trying to catch an error here
 			debug.logWithStack("Program in cyclic shutdown cycle. Force ending. Error: "+why);
 			System.exit(1);//This is bad and there is no saving this
 		}
 		exitBefore = true;
 		core.shutdown(why);
+		SonarExec.shutdown();
 		run = false;
 		try {
 			Thread.sleep(150);//allow time for thread to end correctly

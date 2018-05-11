@@ -9,7 +9,7 @@ import java.util.Scanner;
 
 import com.pi4j.io.serial.Serial;
 import com.pi4j.io.serial.SerialFactory;
-import com.pi4j.io.serial.SerialPortException;
+//import com.pi4j.io.serial.SerialPortException;
 
 /**
  * Directly interfaces with Arduino A dummy library is avalable for Win, Mac,
@@ -24,7 +24,7 @@ import com.pi4j.io.serial.SerialPortException;
  * @author Dakota
  *
  */
-@SuppressWarnings("unused")
+//@SuppressWarnings("unused")
 public class update implements Runnable {// interface with sensors
 	private static short delayTime = 100;// ms, 100ms is 10Hz refresh
 	static boolean IS_PI;
@@ -37,7 +37,7 @@ public class update implements Runnable {// interface with sensors
 	private static Serial serial = SerialFactory.createInstance();
 	private static String output = "[v";
 	private static String input = "def";
-	static boolean ready = false;
+	private static boolean ready = false;
 	static int IMU_pitch = 0, IMU_roll = 0, IMU_YAW = 0, depth = 0, waterLvl = 0;
 	static boolean RUN = false;
 	public static boolean logTraffic = true;// logs the packets sent to Arduino
@@ -46,7 +46,6 @@ public class update implements Runnable {// interface with sensors
 	private static int packetNum = 0;// , packetNumIn = 0;//keeps track of
 										// packets
 	private static String last = null;
-	private static boolean logSerialIn = true;
 	private static String last2;
 	static boolean puase = false;
 	public static void puase(boolean enable){puase = enable;}
@@ -260,7 +259,7 @@ public class update implements Runnable {// interface with sensors
 		newString += test_num;
 		newString += ",";// sets the rest of the values
 		try {
-			Thread.sleep(delayTime - 20);
+			Thread.sleep((long) (delayTime * .8));
 		} catch (InterruptedException e1) {
 			System.out.println("Interupt in delay of update.selftest(): " + e1);
 		}
@@ -270,7 +269,7 @@ public class update implements Runnable {// interface with sensors
 		init = 1;
 		try {
 			while (init != 2) {// waits for init for be 2
-				Thread.sleep(5);
+				Thread.sleep(1);
 			}
 		} catch (Exception e) {
 			System.out.println("This is kinda bad; thread interupt in update.selfTest: " + e.getMessage());
@@ -318,7 +317,6 @@ public class update implements Runnable {// interface with sensors
 				// motors
 				Thread.sleep(120);
 				set("[s1,");// send shut down
-				// TODO send shut command
 				Thread.sleep(120);// wait for signal to go through
 				if (useReal)
 					serial.close();// close port
@@ -364,7 +362,7 @@ public class update implements Runnable {// interface with sensors
 		update.delayTime = delayTime;
 	}
 
-	private static void set(String newOutputString) {
+	public static void set(String newOutputString) {
 		if (basic.logger_lvl > 10)
 			debug.log("Setting update.output @ : " + System.currentTimeMillis() + " : " + newOutputString);
 		output = newOutputString;
@@ -373,12 +371,12 @@ public class update implements Runnable {// interface with sensors
 	public static void log(String me) {// TODO make one writer and close it at
 										// the end
 		packetNum++;
-		if (me.equals(last)) {
+		if (me.equals(last)) {//dont copy every packet, just unique ones
 			return;
 		}
 		last = me;
-		String logFile = "output/SerialOutFile.txt";
-		StringBuilder temp = new StringBuilder();
+		final String logFile = "output/SerialOutFile.txt";
+		final StringBuilder temp = new StringBuilder();
 		try (Writer logOut = new BufferedWriter(new FileWriter(new File(logFile), true))) {
 			if (packetNum != 0)
 				temp.append("Packet " + packetNum + ": ");
@@ -411,7 +409,7 @@ public class update implements Runnable {// interface with sensors
 	}
 
 	public static void fakeReadIn() {
-		String fileIn = "input/SerialInFile.txt";
+		final String fileIn = "input/SerialInFile.txt";
 		try (Scanner in = new Scanner(new File(fileIn))) {
 			String line;
 			while (in.hasNextLine()) {
@@ -425,7 +423,7 @@ public class update implements Runnable {// interface with sensors
 	}
 
 	public static void del() {
-		String logFile = "output/SerialOutFile.txt";
+		final String logFile = "output/SerialOutFile.txt";
 		try (Writer logOut = new FileWriter(new File(logFile))) {
 			logOut.write(" ");
 		} catch (IOException e) {
@@ -433,7 +431,7 @@ public class update implements Runnable {// interface with sensors
 		} finally {
 			/* Finally */}
 
-		String logFile_in = "output/SerialLogIn.txt";
+		final String logFile_in = "output/SerialLogIn.txt";
 		try (Writer logOut2 = new FileWriter(new File(logFile_in))) {
 			logOut2.write(' ');
 		} catch (IOException e) {

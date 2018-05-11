@@ -30,7 +30,7 @@ public class movable implements Runnable {
 	private static int cal_pitch;//calabrated level pitch
 	private static int cal_roll;//calebrated stable roll
 	//
-	private static final int DepthCalibration = 1, PitchCalibration = 1, RollCalibration = 1;//  used for outside calibration
+	private static final double DepthCalibration = 1, PitchCalibration = .6, RollCalibration = .6;//  used for outside calibration
 	private static int target_pitch = 0;//target pitch
 	private static int target_roll = 0;//target roll angle
 	private static boolean use_IMU_cal = true;
@@ -579,9 +579,10 @@ public class movable implements Runnable {
 	 * @throws Exception
 	 */
 	private static void stable_cal() throws Exception {
-		final short CALIBRATION_NUM = 50;//number of measurements calibrations taken
+		final short CALIBRATION_NUM = 25;//number of measurements calibrations taken
 		int roll_cal_total = 0;
 		int pitch_cal_total = 0;
+		update.set("[v");
 		if(!quick){
 			for (int x = 0; x < CALIBRATION_NUM; x++) {
 				pitch_cal_total += update.IMU_pitch();

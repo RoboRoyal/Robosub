@@ -6,8 +6,6 @@ import com.pi4j.system.SystemInfo;
 
 import SonarUtil.SonarExec;
 
-//import org.apache.log4j.BasicConfigurator;
-//import org.apache.log4j.Logger;
 
 /**
  * Core class handles heart of program and many helper functions. Main function
@@ -30,6 +28,7 @@ public class core implements Runnable {
 	private static long MAX_TIME = 20000;// mili
 	private static short error = 0;
 	private static boolean error_allow = true;
+	public static boolean MONO = true;
 
 	static void wait_start(Integer integer) {
 		System.out.println();
@@ -175,7 +174,8 @@ public class core implements Runnable {
 		int nextDir = 0;
 		if(PI){//If we are running on real PI
 			//get next dir from SonarExec
-			try{nextDir = SonarExec.lighterer();}catch(Exception e){debug.print("err in case12: "+e);}
+			if(!MONO) try{nextDir = SonarExec.lighterer();}catch(Exception e){debug.print("err in case12: "+e);}
+			else try{nextDir = SonarExec.mono();}catch(Exception e){debug.print("err in case13: "+e);}
 			debug.print("Next dir is: "+nextDir);
 			movable.moveInDir_R(nextDir);
 		}else{
@@ -359,7 +359,7 @@ public class core implements Runnable {
 			}else if(temp >= 98){
 				System.out.println("Way too hot");
 				debug.log("CPU temp too hott: "+SystemInfo.getCpuTemperature());
-				parser.parse("exit");//TODO change
+				//parser.parse("exit");//TODO change
 				return false; //this can be removed if you don't care about this little CPU that tryed
 			}
 		}catch(Exception e){
@@ -368,7 +368,7 @@ public class core implements Runnable {
 		return true;
 	}
  
-	private static boolean sonar_nav() throws InterruptedException { 
+	/*private static boolean sonar_nav() throws InterruptedException { 
 		int[] pair1 = { 1, 2 };// freq of two beacons
 		sonar.set_target_freq(pair1[0]);
 		movable.move(sonar.get_pinger_dir(), sonar.get_pinger_dist());
@@ -378,7 +378,7 @@ public class core implements Runnable {
 		// aim between them
 		// go for it
 		return (sonar.get_pinger_dist() < 10);
-	}
+	}*/
 
 	static void init(boolean quick) throws InterruptedException {
 		movable.quick = quick;
@@ -568,7 +568,7 @@ public class core implements Runnable {
 	private static boolean selfTest2() throws InterruptedException {
 		String failedTest = "";
 		if (!INIT) {
-			System.out.println("Ya have to INIT and be running before self test ya dingis");
+			System.out.println("Ya have to INIT and be running before self test, do this with: init");
 			return false;
 		}
 		if (!RUN) {
@@ -577,6 +577,7 @@ public class core implements Runnable {
 			return false;
 		}
 		boolean allGood = true;
+		System.out.println("--->Please make sure voltages are correct<---");
 		if (update.self_test()) {
 			System.out.println("***Good connection***"); 
 		} else {
@@ -584,7 +585,6 @@ public class core implements Runnable {
 			failedTest += "Bad connection; ";
 			allGood = false;
 		}
-		//TODO check battery status and temp
 		System.out.println("*** Testing motors. Each motor should turn on, one at a time, for two seconds**");
 		System.out.println("***If a motor does not turn on, there is a problem***");
 		movable.motorTest();
